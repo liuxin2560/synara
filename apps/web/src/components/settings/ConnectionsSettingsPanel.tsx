@@ -44,6 +44,19 @@ function describeHost(host: SshHostConfigSummary | undefined): string {
   return host.proxyJump ? `${destination} · via ${host.proxyJump}` : destination;
 }
 
+function describeWorkerStatus(
+  state: Parameters<typeof remoteWorkerStatusPresentation>[0],
+  lastError: string | undefined,
+): string {
+  if (state === "incompatible") {
+    return "Synara is not installed on this server.";
+  }
+  const label = remoteWorkerStatusPresentation(state).label;
+  if (!lastError || (state !== "error" && state !== "unreachable")) return label;
+  const compactError = lastError.replace(/\s+/g, " ").trim();
+  return `${label} — ${compactError.slice(0, 180)}${compactError.length > 180 ? "…" : ""}`;
+}
+
 export function ConnectionsSettingsPanel(
   props: AppSettingsBinding & { active: boolean },
 ) {
@@ -153,8 +166,9 @@ export function ConnectionsSettingsPanel(
               const host = hostsByAlias.get(connection.alias);
               const worker = workersByAlias.get(connection.alias);
               const presentation = remoteWorkerStatusPresentation(worker?.state);
-              const status = connection.enabled ? presentation.label : "Disabled";
-              const statusDetail = worker?.lastError ? `${status} — ${worker.lastError}` : status;
+              const statusDetail = connection.enabled
+                ? describeWorkerStatus(worker?.state, worker?.lastError)
+                : "Disabled";
               const pending =
                 (connectWorker.isPending || disconnectWorker.isPending) &&
                 (connectWorker.variables?.alias === connection.alias ||
