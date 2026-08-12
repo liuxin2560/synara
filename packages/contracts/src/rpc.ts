@@ -138,6 +138,11 @@ import {
 } from "./orchestration";
 import { ProviderCompactThreadInput } from "./provider";
 import {
+  RemoteListSshHostsResult,
+  RemoteProbeSshHostInput,
+  RemoteProbeSshHostResult,
+} from "./remote";
+import {
   ProviderGetComposerCapabilitiesInput,
   ProviderComposerCapabilities,
   ProviderListAgentsInput,
@@ -892,6 +897,18 @@ export const WsServerGetEnvironmentRpc = Rpc.make(WS_METHODS.serverGetEnvironmen
   error: WsRpcError,
 });
 
+export const WsRemoteListSshHostsRpc = Rpc.make(WS_METHODS.remoteListSshHosts, {
+  payload: Schema.Struct({}),
+  success: RemoteListSshHostsResult,
+  error: WsRpcError,
+});
+
+export const WsRemoteProbeSshHostRpc = Rpc.make(WS_METHODS.remoteProbeSshHost, {
+  payload: RemoteProbeSshHostInput,
+  success: RemoteProbeSshHostResult,
+  error: WsRpcError,
+});
+
 export const WsServerGetSettingsRpc = Rpc.make(WS_METHODS.serverGetSettings, {
   payload: Schema.Struct({}),
   success: ServerGetSettingsResult,
@@ -1267,6 +1284,8 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsSubscribeTerminalEventsRpc,
   WsServerGetConfigRpc,
   WsServerGetEnvironmentRpc,
+  WsRemoteListSshHostsRpc,
+  WsRemoteProbeSshHostRpc,
   WsServerGetSettingsRpc,
   WsServerUpdateSettingsRpc,
   WsServerRefreshProvidersRpc,

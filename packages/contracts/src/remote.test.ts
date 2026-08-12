@@ -1,7 +1,13 @@
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 
-import { RemoteEnvironmentConnection, SshHostAlias, SshHostConfigSummary } from "./remote";
+import {
+  RemoteEnvironmentConnection,
+  RemoteListSshHostsResult,
+  RemoteProbeSshHostInput,
+  SshHostAlias,
+  SshHostConfigSummary,
+} from "./remote";
 
 describe("SSH remote contracts", () => {
   it.each(["cluster", "gpu-01", "user@bastion", "10.0.0.4"])(
@@ -57,5 +63,21 @@ describe("SSH remote contracts", () => {
     });
 
     expect(decoded.environment?.environmentId).toBe("environment-1");
+  });
+
+  it("keeps per-host discovery failures visible without hiding healthy hosts", () => {
+    const decoded = Schema.decodeUnknownSync(RemoteListSshHostsResult)({
+      hosts: [{ alias: "cluster", hostname: "10.0.0.8", user: "liuxin", port: 22 }],
+      errors: [{ alias: "broken", message: "OpenSSH could not resolve this host." }],
+    });
+
+    expect(decoded.hosts).toHaveLength(1);
+    expect(decoded.errors).toHaveLength(1);
+  });
+
+  it("rejects option injection at the probe RPC boundary", () => {
+    expect(() =>
+      Schema.decodeUnknownSync(RemoteProbeSshHostInput)({ alias: "-oProxyCommand=bad" }),
+    ).toThrow();
   });
 });

@@ -1,5 +1,6 @@
 import type {
   ProviderKind,
+  RemoteProbeSshHostInput,
   ServerConfig,
   ServerListProviderUsageInput,
   ServerProviderStatus,
@@ -20,6 +21,7 @@ export const serverQueryKeys = {
   settings: () => ["server", "settings"] as const,
   worktrees: () => ["server", "worktrees"] as const,
   localServers: () => ["server", "localServers"] as const,
+  sshHosts: () => ["server", "remote", "sshHosts"] as const,
   providerUsage: (provider: ProviderKind | null | undefined, homePath?: string | null) =>
     ["server", "providerUsage", provider ?? null, homePath ?? null] as const,
   allProviderUsage: () => ["server", "allProviderUsage"] as const,
@@ -33,6 +35,7 @@ export const serverQueryKeys = {
 
 export const serverMutationKeys = {
   stopLocalServer: () => ["server", "mutation", "stopLocalServer"] as const,
+  probeSshHost: () => ["server", "mutation", "probeSshHost"] as const,
 };
 
 export function serverConfigQueryOptions() {
@@ -187,6 +190,21 @@ export function serverWorktreesQueryOptions() {
   });
 }
 
+export function serverSshHostsQueryOptions(input: { enabled?: boolean } = {}) {
+  return queryOptions({
+    queryKey: serverQueryKeys.sshHosts(),
+    queryFn: async () => {
+      const api = ensureNativeApi();
+      return api.remote.listSshHosts();
+    },
+    enabled: input.enabled ?? true,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: false,
+  });
+}
+
 export function serverLocalServersQueryOptions(
   input:
     | boolean
@@ -263,6 +281,16 @@ export function serverStopLocalServerMutationOptions(input: { queryClient: Query
     },
     onSettled: () => {
       void input.queryClient.invalidateQueries({ queryKey: serverQueryKeys.localServers() });
+    },
+  });
+}
+
+export function serverProbeSshHostMutationOptions() {
+  return mutationOptions({
+    mutationKey: serverMutationKeys.probeSshHost(),
+    mutationFn: async (input: RemoteProbeSshHostInput) => {
+      const api = ensureNativeApi();
+      return api.remote.probeSshHost(input);
     },
   });
 }

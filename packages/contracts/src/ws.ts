@@ -231,6 +231,8 @@ export const WS_METHODS = {
   // Server meta
   serverGetConfig: "server.getConfig",
   serverGetEnvironment: "server.getEnvironment",
+  remoteListSshHosts: "remote.listSshHosts",
+  remoteProbeSshHost: "remote.probeSshHost",
   serverGetSettings: "server.getSettings",
   serverUpdateSettings: "server.updateSettings",
   serverRefreshProviders: "server.refreshProviders",

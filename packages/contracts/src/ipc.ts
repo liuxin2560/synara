@@ -163,6 +163,11 @@ import type {
 } from "./device";
 import type { StudioListThreadOutputsInput, StudioListThreadOutputsResult } from "./studio";
 import type {
+  RemoteListSshHostsResult,
+  RemoteProbeSshHostInput,
+  RemoteProbeSshHostResult,
+} from "./remote";
+import type {
   ServerConfig,
   ServerDiagnosticsResult,
   ServerGenerateAutomationIntentInput,
@@ -765,6 +770,10 @@ export interface NativeApi {
       input: ServerVoiceTranscriptionInput,
     ) => Promise<ServerVoiceTranscriptionResult>;
     upsertKeybinding: (input: ServerUpsertKeybindingInput) => Promise<ServerUpsertKeybindingResult>;
+  };
+  remote: {
+    listSshHosts: () => Promise<RemoteListSshHostsResult>;
+    probeSshHost: (input: RemoteProbeSshHostInput) => Promise<RemoteProbeSshHostResult>;
   };
   stats: {
     getProfileStats: (input: StatsGetProfileStatsInput) => Promise<StatsGetProfileStatsResult>;

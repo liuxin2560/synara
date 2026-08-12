@@ -97,6 +97,8 @@ import { shouldPublishThreadShellForEvent } from "./orchestration/threadShellEve
 import { ProviderDiscoveryService } from "./provider/Services/ProviderDiscoveryService";
 import { discoverSkillsCatalog, synaraSkillsDir } from "./provider/skillsCatalog";
 import { recoverUnregisteredGitHubCheckout } from "./project/githubProjectRegistration";
+import { discoverOpenSshHosts } from "./remote/sshConfig";
+import { probeSshConnection } from "./remote/sshConnection";
 import { ProviderAdapterRegistry } from "./provider/Services/ProviderAdapterRegistry";
 import { ProviderHealth } from "./provider/Services/ProviderHealth";
 import { ProviderService } from "./provider/Services/ProviderService";
@@ -828,6 +830,21 @@ const makeWsRpcHandlersLayer = () =>
           return yield* Effect.fail(
             new WsRpcError({
               message: "External MCP management is available only on a loopback-only instance.",
+            }),
+          );
+        }
+      });
+
+      const requireLocalSshOwner = Effect.gen(function* () {
+        if (!canManageExternalMcp(yield* CurrentWsSessionRole)) {
+          return yield* Effect.fail(
+            new WsRpcError({ message: "Owner authorization is required for SSH remotes." }),
+          );
+        }
+        if (!isLoopbackHost(config.host) || config.publicUrl !== undefined) {
+          return yield* Effect.fail(
+            new WsRpcError({
+              message: "SSH remote management is available only on a loopback-only instance.",
             }),
           );
         }
@@ -1585,6 +1602,25 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(loadServerConfig, "Failed to load server config"),
         [WS_METHODS.serverGetEnvironment]: () =>
           rpcEffect(serverEnvironment.getDescriptor, "Failed to load server environment"),
+        [WS_METHODS.remoteListSshHosts]: () =>
+          rpcEffect(
+            requireLocalSshOwner.pipe(
+              Effect.andThen(Effect.tryPromise(() => discoverOpenSshHosts())),
+            ),
+            "Failed to discover SSH hosts",
+          ),
+        [WS_METHODS.remoteProbeSshHost]: (input) =>
+          rpcEffect(
+            requireLocalSshOwner.pipe(
+              Effect.andThen(
+                Effect.tryPromise(async () => ({
+                  alias: input.alias,
+                  ...(await probeSshConnection(input.alias)),
+                })),
+              ),
+            ),
+            "Failed to probe SSH host",
+          ),
         [WS_METHODS.serverGetSettings]: () =>
           rpcEffect(serverSettings.getSettingsView, "Failed to load server settings"),
         [WS_METHODS.serverUpdateSettings]: (input) =>

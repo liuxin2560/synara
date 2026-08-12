@@ -39,3 +39,27 @@ export const RemoteEnvironmentConnection = Schema.Struct({
   lastError: Schema.optional(Schema.String.check(Schema.isMaxLength(2_000))),
 });
 export type RemoteEnvironmentConnection = typeof RemoteEnvironmentConnection.Type;
+
+export const RemoteSshHostDiscoveryError = Schema.Struct({
+  alias: SshHostAlias,
+  message: TrimmedNonEmptyString.check(Schema.isMaxLength(2_000)),
+});
+export type RemoteSshHostDiscoveryError = typeof RemoteSshHostDiscoveryError.Type;
+
+export const RemoteListSshHostsResult = Schema.Struct({
+  hosts: Schema.Array(SshHostConfigSummary),
+  errors: Schema.Array(RemoteSshHostDiscoveryError),
+});
+export type RemoteListSshHostsResult = typeof RemoteListSshHostsResult.Type;
+
+export const RemoteProbeSshHostInput = Schema.Struct({
+  alias: SshHostAlias,
+});
+export type RemoteProbeSshHostInput = typeof RemoteProbeSshHostInput.Type;
+
+export const RemoteProbeSshHostResult = Schema.Struct({
+  alias: SshHostAlias,
+  state: RemoteConnectionState,
+  lastError: Schema.optional(Schema.String.check(Schema.isMaxLength(2_000))),
+});
+export type RemoteProbeSshHostResult = typeof RemoteProbeSshHostResult.Type;

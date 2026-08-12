@@ -14,6 +14,7 @@ import {
   serverLocalServersQueryOptions,
   serverProviderUsageSnapshotQueryOptions,
   serverQueryKeys,
+  serverSshHostsQueryOptions,
   sidebarLocalServersQueryOptions,
 } from "./serverReactQuery";
 
@@ -184,6 +185,20 @@ describe("serverLocalServersQueryOptions", () => {
 
     expect(options.enabled).toBe(false);
     expect(options.refetchInterval).toBe(false);
+  });
+});
+
+describe("serverSshHostsQueryOptions", () => {
+  it("refreshes host discovery when the local app regains focus", () => {
+    const options = serverSshHostsQueryOptions();
+
+    expect(options.queryKey).toEqual(serverQueryKeys.sshHosts());
+    expect(options.refetchOnWindowFocus).toBe(true);
+    expect(options.retry).toBe(false);
+  });
+
+  it("can stay disabled until the remote sidebar is visible", () => {
+    expect(serverSshHostsQueryOptions({ enabled: false }).enabled).toBe(false);
   });
 });
 

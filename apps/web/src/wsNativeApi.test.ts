@@ -646,6 +646,23 @@ describe("wsNativeApi", () => {
     expect(requestMock).toHaveBeenCalledWith(WS_METHODS.serverGetEnvironment);
   });
 
+  it("forwards SSH host discovery and probing to the remote websocket methods", async () => {
+    requestMock.mockResolvedValueOnce({ hosts: [], errors: [] }).mockResolvedValueOnce({
+      alias: "cluster",
+      state: "ready",
+    });
+    const { createWsNativeApi } = await import("./wsNativeApi");
+    const api = createWsNativeApi();
+
+    await api.remote.listSshHosts();
+    await api.remote.probeSshHost({ alias: "cluster" });
+
+    expect(requestMock).toHaveBeenNthCalledWith(1, WS_METHODS.remoteListSshHosts);
+    expect(requestMock).toHaveBeenNthCalledWith(2, WS_METHODS.remoteProbeSshHost, {
+      alias: "cluster",
+    });
+  });
+
   it("uses websocket RPC for external MCP management in packaged and browser builds", async () => {
     requestMock
       .mockResolvedValueOnce([])

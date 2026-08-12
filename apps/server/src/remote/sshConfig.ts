@@ -1,7 +1,7 @@
 import { glob, readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import path from "node:path";
-import type { SshHostConfigSummary } from "@synara/contracts";
+import type { RemoteListSshHostsResult, SshHostConfigSummary } from "@synara/contracts";
 
 import { runProcess, type ProcessRunResult } from "../processRunner";
 
@@ -221,8 +221,21 @@ export async function resolveOpenSshHost(
 
 export async function discoverOpenSshHosts(
   options: DiscoverOpenSshHostsOptions = {},
-): Promise<SshHostConfigSummary[]> {
+): Promise<RemoteListSshHostsResult> {
   const aliases = await discoverOpenSshHostAliases(options);
   const runner = options.runner ?? runProcess;
-  return Promise.all(aliases.map((alias) => resolveOpenSshHost(alias, runner)));
+  const settled = await Promise.all(
+    aliases.map(async (alias) => {
+      try {
+        return { host: await resolveOpenSshHost(alias, runner) } as const;
+      } catch (error) {
+        const message = (error instanceof Error ? error.message : String(error)).slice(0, 2_000);
+        return { error: { alias: alias as SshHostConfigSummary["alias"], message } } as const;
+      }
+    }),
+  );
+  return {
+    hosts: settled.flatMap((entry) => ("host" in entry ? [entry.host] : [])),
+    errors: settled.flatMap((entry) => ("error" in entry ? [entry.error] : [])),
+  };
 }

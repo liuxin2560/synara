@@ -721,6 +721,10 @@ export function createWsNativeApi(): NativeApi {
       },
       upsertKeybinding: (input) => transport.request(WS_METHODS.serverUpsertKeybinding, input),
     },
+    remote: {
+      listSshHosts: () => transport.request(WS_METHODS.remoteListSshHosts),
+      probeSshHost: (input) => transport.request(WS_METHODS.remoteProbeSshHost, input),
+    },
     stats: {
       getProfileStats: (input) => transport.request(WS_METHODS.statsGetProfileStats, input),
       getProfileTokenStats: (input) =>

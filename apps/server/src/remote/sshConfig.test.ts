@@ -96,18 +96,57 @@ describe("OpenSSH host discovery", () => {
       stderrTruncated: false,
     }));
 
-    await expect(discoverOpenSshHosts({ homeDir, runner })).resolves.toEqual([
-      {
-        alias: "cluster",
-        hostname: "cluster.example.com",
-        user: "liuxin",
-        port: 22,
-      },
-    ]);
+    await expect(discoverOpenSshHosts({ homeDir, runner })).resolves.toEqual({
+      hosts: [
+        {
+          alias: "cluster",
+          hostname: "cluster.example.com",
+          user: "liuxin",
+          port: 22,
+        },
+      ],
+      errors: [],
+    });
     expect(runner).toHaveBeenCalledWith("ssh", ["-G", "cluster"], {
       timeoutMs: 10_000,
       maxBufferBytes: 256 * 1024,
       outputMode: "truncate",
     });
   });
+
+  it("isolates a malformed host instead of hiding the rest", async () => {
+    const homeDir = await mkdtemp(path.join(tmpdir(), "synara-ssh-partial-"));
+    temporaryDirectories.push(homeDir);
+    await mkdir(path.join(homeDir, ".ssh"), { recursive: true });
+    await writeFile(
+      path.join(homeDir, ".ssh", "config"),
+      "Host healthy broken\n",
+      "utf8",
+    );
+    const runner = vi.fn(async (_command: string, args: readonly string[]) =>
+      processResultForAlias(args[1] ?? ""),
+    );
+
+    const result = await discoverOpenSshHosts({ homeDir, runner });
+
+    expect(result.hosts.map((host) => host.alias)).toEqual(["healthy"]);
+    expect(result.errors).toEqual([
+      { alias: "broken", message: "OpenSSH did not resolve a user for Host broken." },
+    ]);
+  });
 });
+
+function processResultForAlias(alias: string): ProcessRunResult {
+  return {
+    stdout:
+      alias === "healthy"
+        ? "user liuxin\nhostname healthy.example.com\nport 22\n"
+        : "hostname broken.example.com\nport 22\n",
+    stderr: "",
+    code: 0,
+    signal: null,
+    timedOut: false,
+    stdoutTruncated: false,
+    stderrTruncated: false,
+  };
+}
