@@ -92,6 +92,7 @@ describe("SettingsSidebarNav", () => {
     expect(markup).toContain("Archived");
     expect(markup).toContain("Chat behavior");
     expect(markup).toContain("MCP connections");
+    expect(markup).toContain("Connections");
     expect(markup).toContain("Agent providers");
     expect(markup).toContain("Managed worktrees");
     expect(markup).toContain("System tools");

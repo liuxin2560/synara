@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   groupRemoteCodexThreadsByCwd,
   remoteWorkerStatusPresentation,
+  selectEnabledRemoteHosts,
 } from "./RemoteEnvironmentsSidebar.logic";
 
 function thread(input: {
@@ -26,6 +27,19 @@ function thread(input: {
 }
 
 describe("remote environment sidebar grouping", () => {
+  it("shows only SSH hosts explicitly added and enabled in settings", () => {
+    expect(
+      selectEnabledRemoteHosts(
+        [{ alias: "cluster" }, { alias: "cluster2" }, { alias: "unused" }],
+        [
+          { alias: "cluster", enabled: false },
+          { alias: "cluster2", enabled: true },
+          { alias: "missing", enabled: true },
+        ],
+      ),
+    ).toEqual([{ alias: "cluster2" }]);
+  });
+
   it("groups by exact remote cwd and orders folders and threads by recency", () => {
     const groups = groupRemoteCodexThreadsByCwd([
       thread({ id: "older-a", cwd: "/srv/a", updatedAt: 20 }),

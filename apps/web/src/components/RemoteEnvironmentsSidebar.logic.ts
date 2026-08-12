@@ -1,5 +1,15 @@
 import type { RemoteCodexThreadSummary, RemoteSynaraWorkerState } from "@synara/contracts";
 
+export function selectEnabledRemoteHosts<Host extends { readonly alias: string }>(
+  hosts: readonly Host[],
+  connections: readonly { readonly alias: string; readonly enabled: boolean }[],
+): Host[] {
+  const enabledAliases = new Set(
+    connections.filter((connection) => connection.enabled).map((connection) => connection.alias),
+  );
+  return hosts.filter((host) => enabledAliases.has(host.alias));
+}
+
 export interface RemoteThreadFolder {
   readonly cwd: string;
   readonly threads: readonly RemoteCodexThreadSummary[];

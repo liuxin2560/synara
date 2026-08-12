@@ -6070,6 +6070,7 @@ export default function Sidebar() {
           </>
         )}
         <RemoteEnvironmentsSidebar
+          connections={appSettings.remoteSshConnections}
           enabled={!isOnSettings && !isOnStudio && !activityViewEnabled}
         />
         {!isOnSettings && !isOnStudio && !activityViewEnabled && chatsSectionVisible ? (

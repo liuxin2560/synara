@@ -28,6 +28,7 @@ import {
   MODEL_PROVIDER_SETTINGS,
   normalizeChatFontSizePx,
   normalizeCustomModelSlugs,
+  normalizeRemoteSshConnections,
   normalizeStoredAppSettings,
   normalizeTerminalFontFamily,
   normalizeTerminalFontSizePx,
@@ -55,6 +56,21 @@ describe("normalizeCustomModelSlugs", () => {
     expect(normalizeCustomModelSlugs(["sonnet"], "claudeAgent")).toEqual([]);
     expect(normalizeCustomModelSlugs(["claude/custom-sonnet"], "claudeAgent")).toEqual([
       "claude/custom-sonnet",
+    ]);
+  });
+});
+
+describe("normalizeRemoteSshConnections", () => {
+  it("trims aliases, preserves order, and ignores duplicate entries", () => {
+    expect(
+      normalizeRemoteSshConnections([
+        { alias: " cluster2 ", enabled: true },
+        { alias: "cluster", enabled: false },
+        { alias: "cluster2", enabled: false },
+      ]),
+    ).toEqual([
+      { alias: "cluster2", enabled: true },
+      { alias: "cluster", enabled: false },
     ]);
   });
 });

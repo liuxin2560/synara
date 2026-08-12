@@ -4,8 +4,9 @@ import type {
   SshHostConfigSummary,
 } from "@synara/contracts";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
+import type { RemoteSshConnectionSetting } from "~/appSettings";
 import { FolderOpenIcon, GlobeIcon } from "~/lib/icons";
 import {
   buildActiveRemoteBackendTarget,
@@ -30,6 +31,7 @@ import {
 import {
   groupRemoteCodexThreadsByCwd,
   remoteWorkerStatusPresentation,
+  selectEnabledRemoteHosts,
 } from "./RemoteEnvironmentsSidebar.logic";
 import { ActiveRemoteBackendSidebar } from "./ActiveRemoteBackendSidebar";
 
@@ -177,18 +179,23 @@ function RemoteHostSection(props: {
 }
 
 function LocalRemoteEnvironmentsSidebar(props: {
+  connections: readonly RemoteSshConnectionSetting[];
   enabled?: boolean;
   onOpenThread?: (thread: RemoteCodexThreadSummary) => void;
 }) {
   const enabled = props.enabled ?? true;
   const queryClient = useQueryClient();
+  const autoConnectAttempts = useRef(new Set<string>());
   const [expandedHosts, setExpandedHosts] = useState<ReadonlySet<string>>(new Set());
   const [openingThreadId, setOpeningThreadId] = useState<string | null>(null);
   const [openError, setOpenError] = useState<{ alias: string; message: string } | null>(null);
   const hostsQuery = useQuery(serverSshHostsQueryOptions({ enabled }));
   const workersQuery = useQuery(serverSynaraWorkersQueryOptions({ enabled }));
   const connectWorker = useMutation(serverConnectSynaraWorkerMutationOptions({ queryClient }));
-  const hosts = hostsQuery.data?.hosts ?? [];
+  const hosts = selectEnabledRemoteHosts(
+    hostsQuery.data?.hosts ?? [],
+    props.connections,
+  );
   const threadQueries = useQueries({
     queries: hosts.map((host) =>
       serverRemoteCodexThreadsQueryOptions({
@@ -202,6 +209,25 @@ function LocalRemoteEnvironmentsSidebar(props: {
     () => new Map((workersQuery.data?.workers ?? []).map((worker) => [worker.alias, worker])),
     [workersQuery.data?.workers],
   );
+
+  useEffect(() => {
+    const enabledAliases = new Set(hosts.map((host) => host.alias));
+    for (const alias of autoConnectAttempts.current) {
+      if (!enabledAliases.has(alias)) autoConnectAttempts.current.delete(alias);
+    }
+    for (const host of hosts) {
+      const state = workersByAlias.get(host.alias)?.state;
+      if (
+        state === "ready" ||
+        state === "connecting" ||
+        autoConnectAttempts.current.has(host.alias)
+      ) {
+        continue;
+      }
+      autoConnectAttempts.current.add(host.alias);
+      connectWorker.mutate({ alias: host.alias });
+    }
+  }, [connectWorker, hosts, workersByAlias]);
 
   if (!enabled || (hosts.length === 0 && !hostsQuery.isLoading && !hostsQuery.isError)) return null;
 
@@ -295,6 +321,7 @@ function LocalRemoteEnvironmentsSidebar(props: {
 }
 
 export function RemoteEnvironmentsSidebar(props: {
+  connections: readonly RemoteSshConnectionSetting[];
   enabled?: boolean;
   onOpenThread?: (thread: RemoteCodexThreadSummary) => void;
 }) {

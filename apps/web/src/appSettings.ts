@@ -17,6 +17,7 @@ import {
   type ProviderStartOptions,
   type ServerSettingsView,
   type ServerSettingsPatch,
+  SshHostAlias,
 } from "@synara/contracts";
 import {
   getDefaultModel,
@@ -63,6 +64,12 @@ export const DEFAULT_TERMINAL_FONT_SIZE_PX = 12;
 // (defined in index.css). The list below is only autocomplete inspiration shown
 // in the settings input — it does NOT restrict what can be entered.
 export const DEFAULT_TERMINAL_FONT_FAMILY = "";
+
+export const RemoteSshConnectionSetting = Schema.Struct({
+  alias: SshHostAlias,
+  enabled: Schema.Boolean,
+});
+export type RemoteSshConnectionSetting = typeof RemoteSshConnectionSetting.Type;
 
 export const TERMINAL_FONT_FAMILY_SUGGESTIONS: ReadonlyArray<string> = [
   "JetBrains Mono",
@@ -276,6 +283,10 @@ export const AppSettingsSchema = Schema.Struct({
   providerOrder: Schema.Array(PersistedProviderKind).pipe(
     withDefaults(() => [...DEFAULT_PROVIDER_ORDER]),
   ),
+  // Local-only allowlist for SSH hosts shown in the sidebar. OpenSSH remains the
+  // source of credentials and transport details; Synara stores aliases and the
+  // user's desired connection state only.
+  remoteSshConnections: Schema.Array(RemoteSshConnectionSetting).pipe(withDefaults(() => [])),
   // Deprecated local-only preference kept for backward-compatible decoding.
   // Model-level hiding caused too many edge cases, so the app now normalizes it away.
   hiddenModels: Schema.Array(
@@ -551,8 +562,21 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
     customPiModels: normalizeCustomModelSlugs(settings.customPiModels, "pi"),
     hiddenProviders: normalizeHiddenProviders(settings.hiddenProviders),
     providerOrder: normalizeProviderOrder(settings.providerOrder),
+    remoteSshConnections: normalizeRemoteSshConnections(settings.remoteSshConnections),
     hiddenModels: [],
   };
+}
+
+export function normalizeRemoteSshConnections(
+  connections: readonly RemoteSshConnectionSetting[],
+): RemoteSshConnectionSetting[] {
+  const byAlias = new Map<string, RemoteSshConnectionSetting>();
+  for (const connection of connections) {
+    const alias = connection.alias.trim();
+    if (!alias || byAlias.has(alias)) continue;
+    byAlias.set(alias, { alias, enabled: connection.enabled });
+  }
+  return Array.from(byAlias.values());
 }
 
 function serverSettingsToAppSettings(settings: ServerSettingsView): Partial<AppSettings> {

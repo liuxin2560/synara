@@ -10,6 +10,7 @@ export const SETTINGS_SECTION_IDS = [
   "notifications",
   "behavior",
   "appsnap",
+  "connections",
   "shortcuts",
   "worktrees",
   "archived",
@@ -127,6 +128,14 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
     description: "Give Codex, Claude, and other local agents scoped access to Synara tasks.",
     icon: "plugin-1",
     eyebrow: "External agents",
+  },
+  {
+    id: "connections",
+    group: "integrations",
+    label: "Connections",
+    description: "Choose SSH servers to show, connect, and use from this Mac.",
+    icon: "globe",
+    eyebrow: "Remote environments",
   },
   {
     id: "providers",

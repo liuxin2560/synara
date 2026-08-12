@@ -27,6 +27,7 @@ import {
 } from "../appSettings";
 import { APP_VERSION } from "../branding";
 import { AdvancedSettingsPanel } from "~/components/settings/AdvancedSettingsPanel";
+import { ConnectionsSettingsPanel } from "~/components/settings/ConnectionsSettingsPanel";
 import { AppIconPicker } from "~/components/settings/AppIconPicker";
 import {
   ArchivedSettingsPanel,
@@ -262,6 +263,10 @@ function SettingsRouteView() {
       : []),
     ...(settings.confirmTerminalTabClose !== defaults.confirmTerminalTabClose
       ? ["Terminal close confirmation"]
+      : []),
+    ...(JSON.stringify(settings.remoteSshConnections) !==
+    JSON.stringify(defaults.remoteSshConnections)
+      ? ["SSH connections"]
       : []),
     ...(isGitTextGenerationModelDirty ? ["Git writing model"] : []),
     ...(settings.customCodexModels.length > 0 ||
@@ -1117,6 +1122,12 @@ function SettingsRouteView() {
                   resetEpoch={resetEpoch}
                 />
                 <ExternalMcpSettingsPanel active={activeSection === "integrations"} />
+                <ConnectionsSettingsPanel
+                  active={activeSection === "connections"}
+                  settings={settings}
+                  defaults={defaults}
+                  updateSettings={updateSettings}
+                />
                 <AdvancedSettingsPanel
                   active={activeSection === "advanced"}
                   onOpenReleaseHistory={() => setReleaseHistoryOpen(true)}
