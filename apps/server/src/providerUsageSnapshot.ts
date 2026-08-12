@@ -25,6 +25,11 @@ const USAGE_CACHE_TTL_MS = 30_000;
 // for heavy local usage without scanning the full historical archive every refresh.
 const MAX_RECENT_USAGE_FILES = 2_000;
 const PROVIDER_USAGE_FILE_READ_CONCURRENCY = 16;
+const REVERSE_JSONL_READ_CHUNK_BYTES = 64 * 1024;
+// A transcript can contain very large tool-result rows. They are irrelevant to
+// the usage summary, so never retain an unbounded partial line while walking a
+// file backwards.
+const MAX_REVERSE_JSONL_LINE_BYTES = 1024 * 1024;
 
 type UsageSnapshot = Exclude<ServerGetProviderUsageSnapshotResult, null>;
 
@@ -281,52 +286,98 @@ async function listRecentCodexSessionFiles(sessionsRoot: string): Promise<Readon
   return listRecentFiles(candidates);
 }
 
-async function readCodexSessionSummary(path: string): Promise<CodexSessionSummary | null> {
-  let fileContents: string;
+async function* readJsonLinesFromEnd(path: string): AsyncGenerator<string> {
+  const handle = await fs.open(path, "r");
   try {
-    fileContents = await fs.readFile(path, "utf8");
+    const { size } = await handle.stat();
+    let position = size;
+    let trailingFragment = Buffer.alloc(0);
+    let trailingFragmentTooLarge = false;
+
+    while (position > 0) {
+      const requestedBytes = Math.min(REVERSE_JSONL_READ_CHUNK_BYTES, position);
+      position -= requestedBytes;
+      const block = Buffer.allocUnsafe(requestedBytes);
+      const { bytesRead } = await handle.read(block, 0, requestedBytes, position);
+      const contents = block.subarray(0, bytesRead);
+      let segmentEnd = contents.length;
+
+      for (let index = contents.length - 1; index >= 0; index -= 1) {
+        if (contents[index] !== 0x0a) continue;
+
+        const segment = contents.subarray(index + 1, segmentEnd);
+        const lineTooLarge =
+          trailingFragmentTooLarge ||
+          segment.length + trailingFragment.length > MAX_REVERSE_JSONL_LINE_BYTES;
+        if (!lineTooLarge) {
+          const line = Buffer.concat([segment, trailingFragment])
+            .toString("utf8")
+            .replace(/\r$/u, "");
+          if (line.trim().length > 0) yield line;
+        }
+        trailingFragment = Buffer.alloc(0);
+        trailingFragmentTooLarge = false;
+        segmentEnd = index;
+      }
+
+      const leadingFragment = contents.subarray(0, segmentEnd);
+      if (
+        trailingFragmentTooLarge ||
+        leadingFragment.length + trailingFragment.length > MAX_REVERSE_JSONL_LINE_BYTES
+      ) {
+        trailingFragment = Buffer.alloc(0);
+        trailingFragmentTooLarge = true;
+      } else {
+        trailingFragment = Buffer.concat([leadingFragment, trailingFragment]);
+      }
+    }
+
+    if (!trailingFragmentTooLarge && trailingFragment.length > 0) {
+      const line = trailingFragment.toString("utf8").replace(/\r$/u, "");
+      if (line.trim().length > 0) yield line;
+    }
+  } finally {
+    await handle.close();
+  }
+}
+
+export async function readCodexSessionSummary(path: string): Promise<CodexSessionSummary | null> {
+  try {
+    for await (const line of readJsonLinesFromEnd(path)) {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(line);
+      } catch {
+        continue;
+      }
+
+      const record = asRecord(parsed);
+      if (!record || record.type !== "event_msg") {
+        continue;
+      }
+
+      const payload = asRecord(record.payload);
+      if (!payload || payload.type !== "token_count") {
+        continue;
+      }
+
+      const timestampMs = parseTimestampMs(record.timestamp ?? payload.timestamp);
+      if (timestampMs === null) {
+        continue;
+      }
+
+      const summary = {
+        timestampMs,
+        totalTokens: readCodexTotalTokens(payload),
+        limits: normalizeCodexUsageLimits(payload.rate_limits ?? payload.rateLimits),
+      } satisfies CodexSessionSummary;
+
+      // Codex session JSONL is chronological; only the final token_count event is
+      // needed for lifetime accounting and the latest quota snapshot per file.
+      return summary;
+    }
   } catch {
     return null;
-  }
-
-  const lines = fileContents.split(/\r?\n/u);
-  for (let index = lines.length - 1; index >= 0; index -= 1) {
-    const line = lines[index];
-    if (!line || !line.trim()) {
-      continue;
-    }
-
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(line);
-    } catch {
-      continue;
-    }
-
-    const record = asRecord(parsed);
-    if (!record || record.type !== "event_msg") {
-      continue;
-    }
-
-    const payload = asRecord(record.payload);
-    if (!payload || payload.type !== "token_count") {
-      continue;
-    }
-
-    const timestampMs = parseTimestampMs(record.timestamp ?? payload.timestamp);
-    if (timestampMs === null) {
-      continue;
-    }
-
-    const summary = {
-      timestampMs,
-      totalTokens: readCodexTotalTokens(payload),
-      limits: normalizeCodexUsageLimits(payload.rate_limits ?? payload.rateLimits),
-    } satisfies CodexSessionSummary;
-
-    // Codex session JSONL is chronological; only the final token_count event is
-    // needed for lifetime accounting and the latest quota snapshot per file.
-    return summary;
   }
 
   return null;
