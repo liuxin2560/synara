@@ -650,13 +650,23 @@ describe("wsNativeApi", () => {
     requestMock
       .mockResolvedValueOnce({ hosts: [], errors: [] })
       .mockResolvedValueOnce({ alias: "cluster", state: "ready" })
-      .mockResolvedValueOnce({ threads: [], nextCursor: null });
+      .mockResolvedValueOnce({ threads: [], nextCursor: null })
+      .mockResolvedValueOnce({ workers: [] })
+      .mockResolvedValueOnce({
+        alias: "cluster",
+        state: "ready",
+        localUrl: "http://127.0.0.1:43123",
+      })
+      .mockResolvedValueOnce({ alias: "cluster", state: "disconnected" });
     const { createWsNativeApi } = await import("./wsNativeApi");
     const api = createWsNativeApi();
 
     await api.remote.listSshHosts();
     await api.remote.probeSshHost({ alias: "cluster" });
     await api.remote.listCodexThreads({ alias: "cluster", limit: 50 });
+    await api.remote.listSynaraWorkers();
+    await api.remote.connectSynaraWorker({ alias: "cluster" });
+    await api.remote.disconnectSynaraWorker({ alias: "cluster" });
 
     expect(requestMock).toHaveBeenNthCalledWith(1, WS_METHODS.remoteListSshHosts);
     expect(requestMock).toHaveBeenNthCalledWith(2, WS_METHODS.remoteProbeSshHost, {
@@ -665,6 +675,16 @@ describe("wsNativeApi", () => {
     expect(requestMock).toHaveBeenNthCalledWith(3, WS_METHODS.remoteListCodexThreads, {
       alias: "cluster",
       limit: 50,
+    });
+    expect(requestMock).toHaveBeenNthCalledWith(4, WS_METHODS.remoteListSynaraWorkers);
+    expect(requestMock).toHaveBeenNthCalledWith(
+      5,
+      WS_METHODS.remoteConnectSynaraWorker,
+      { alias: "cluster" },
+      { timeoutMs: null },
+    );
+    expect(requestMock).toHaveBeenNthCalledWith(6, WS_METHODS.remoteDisconnectSynaraWorker, {
+      alias: "cluster",
     });
   });
 

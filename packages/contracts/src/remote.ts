@@ -102,3 +102,37 @@ export const RemoteListCodexThreadsResult = Schema.Struct({
   nextCursor: Schema.NullOr(TrimmedNonEmptyString.check(Schema.isMaxLength(4_096))),
 });
 export type RemoteListCodexThreadsResult = typeof RemoteListCodexThreadsResult.Type;
+
+export const RemoteSynaraWorkerState = Schema.Literals([
+  "disconnected",
+  "connecting",
+  "ready",
+  "unreachable",
+  "incompatible",
+  "error",
+]);
+export type RemoteSynaraWorkerState = typeof RemoteSynaraWorkerState.Type;
+
+export const RemoteSynaraWorkerConnection = Schema.Struct({
+  alias: SshHostAlias,
+  state: RemoteSynaraWorkerState,
+  localUrl: Schema.optional(
+    TrimmedNonEmptyString.check(
+      Schema.isMaxLength(2_048),
+      Schema.isPattern(/^http:\/\/127\.0\.0\.1:\d+$/),
+    ),
+  ),
+  environment: Schema.optional(ExecutionEnvironmentDescriptor),
+  lastError: Schema.optional(Schema.String.check(Schema.isMaxLength(2_000))),
+});
+export type RemoteSynaraWorkerConnection = typeof RemoteSynaraWorkerConnection.Type;
+
+export const RemoteSynaraWorkerInput = Schema.Struct({
+  alias: SshHostAlias,
+});
+export type RemoteSynaraWorkerInput = typeof RemoteSynaraWorkerInput.Type;
+
+export const RemoteListSynaraWorkersResult = Schema.Struct({
+  workers: Schema.Array(RemoteSynaraWorkerConnection),
+});
+export type RemoteListSynaraWorkersResult = typeof RemoteListSynaraWorkersResult.Type;

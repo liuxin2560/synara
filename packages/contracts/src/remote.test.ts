@@ -5,6 +5,7 @@ import {
   RemoteEnvironmentConnection,
   RemoteListSshHostsResult,
   RemoteListCodexThreadsInput,
+  RemoteSynaraWorkerConnection,
   RemoteProbeSshHostInput,
   SshHostAlias,
   SshHostConfigSummary,
@@ -86,5 +87,15 @@ describe("SSH remote contracts", () => {
     expect(
       Schema.decodeUnknownSync(RemoteListCodexThreadsInput)({ alias: "cluster" }),
     ).toEqual({ alias: "cluster" });
+  });
+
+  it("only exposes loopback worker endpoints", () => {
+    const decode = Schema.decodeUnknownSync(RemoteSynaraWorkerConnection);
+    expect(
+      decode({ alias: "cluster", state: "ready", localUrl: "http://127.0.0.1:43123" }),
+    ).toEqual({ alias: "cluster", state: "ready", localUrl: "http://127.0.0.1:43123" });
+    expect(() =>
+      decode({ alias: "cluster", state: "ready", localUrl: "http://cluster:3773" }),
+    ).toThrow();
   });
 });

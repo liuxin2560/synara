@@ -141,8 +141,11 @@ import {
   RemoteListSshHostsResult,
   RemoteListCodexThreadsInput,
   RemoteListCodexThreadsResult,
+  RemoteListSynaraWorkersResult,
   RemoteProbeSshHostInput,
   RemoteProbeSshHostResult,
+  RemoteSynaraWorkerConnection,
+  RemoteSynaraWorkerInput,
 } from "./remote";
 import {
   ProviderGetComposerCapabilitiesInput,
@@ -917,6 +920,27 @@ export const WsRemoteListCodexThreadsRpc = Rpc.make(WS_METHODS.remoteListCodexTh
   error: WsRpcError,
 });
 
+export const WsRemoteListSynaraWorkersRpc = Rpc.make(WS_METHODS.remoteListSynaraWorkers, {
+  payload: Schema.Struct({}),
+  success: RemoteListSynaraWorkersResult,
+  error: WsRpcError,
+});
+
+export const WsRemoteConnectSynaraWorkerRpc = Rpc.make(WS_METHODS.remoteConnectSynaraWorker, {
+  payload: RemoteSynaraWorkerInput,
+  success: RemoteSynaraWorkerConnection,
+  error: WsRpcError,
+});
+
+export const WsRemoteDisconnectSynaraWorkerRpc = Rpc.make(
+  WS_METHODS.remoteDisconnectSynaraWorker,
+  {
+    payload: RemoteSynaraWorkerInput,
+    success: RemoteSynaraWorkerConnection,
+    error: WsRpcError,
+  },
+);
+
 export const WsServerGetSettingsRpc = Rpc.make(WS_METHODS.serverGetSettings, {
   payload: Schema.Struct({}),
   success: ServerGetSettingsResult,
@@ -1295,6 +1319,9 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsRemoteListSshHostsRpc,
   WsRemoteProbeSshHostRpc,
   WsRemoteListCodexThreadsRpc,
+  WsRemoteListSynaraWorkersRpc,
+  WsRemoteConnectSynaraWorkerRpc,
+  WsRemoteDisconnectSynaraWorkerRpc,
   WsServerGetSettingsRpc,
   WsServerUpdateSettingsRpc,
   WsServerRefreshProvidersRpc,

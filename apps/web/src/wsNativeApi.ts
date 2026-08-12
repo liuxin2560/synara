@@ -725,6 +725,11 @@ export function createWsNativeApi(): NativeApi {
       listSshHosts: () => transport.request(WS_METHODS.remoteListSshHosts),
       probeSshHost: (input) => transport.request(WS_METHODS.remoteProbeSshHost, input),
       listCodexThreads: (input) => transport.request(WS_METHODS.remoteListCodexThreads, input),
+      listSynaraWorkers: () => transport.request(WS_METHODS.remoteListSynaraWorkers),
+      connectSynaraWorker: (input) =>
+        transport.request(WS_METHODS.remoteConnectSynaraWorker, input, { timeoutMs: null }),
+      disconnectSynaraWorker: (input) =>
+        transport.request(WS_METHODS.remoteDisconnectSynaraWorker, input),
     },
     stats: {
       getProfileStats: (input) => transport.request(WS_METHODS.statsGetProfileStats, input),

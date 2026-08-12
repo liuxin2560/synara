@@ -166,8 +166,11 @@ import type {
   RemoteListSshHostsResult,
   RemoteListCodexThreadsInput,
   RemoteListCodexThreadsResult,
+  RemoteListSynaraWorkersResult,
   RemoteProbeSshHostInput,
   RemoteProbeSshHostResult,
+  RemoteSynaraWorkerConnection,
+  RemoteSynaraWorkerInput,
 } from "./remote";
 import type {
   ServerConfig,
@@ -777,6 +780,11 @@ export interface NativeApi {
     listSshHosts: () => Promise<RemoteListSshHostsResult>;
     probeSshHost: (input: RemoteProbeSshHostInput) => Promise<RemoteProbeSshHostResult>;
     listCodexThreads: (input: RemoteListCodexThreadsInput) => Promise<RemoteListCodexThreadsResult>;
+    listSynaraWorkers: () => Promise<RemoteListSynaraWorkersResult>;
+    connectSynaraWorker: (input: RemoteSynaraWorkerInput) => Promise<RemoteSynaraWorkerConnection>;
+    disconnectSynaraWorker: (
+      input: RemoteSynaraWorkerInput,
+    ) => Promise<RemoteSynaraWorkerConnection>;
   };
   stats: {
     getProfileStats: (input: StatsGetProfileStatsInput) => Promise<StatsGetProfileStatsResult>;

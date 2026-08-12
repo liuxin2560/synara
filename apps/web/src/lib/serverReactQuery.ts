@@ -2,6 +2,7 @@ import type {
   ProviderKind,
   RemoteProbeSshHostInput,
   RemoteListCodexThreadsInput,
+  RemoteSynaraWorkerInput,
   ServerConfig,
   ServerListProviderUsageInput,
   ServerProviderStatus,
@@ -25,6 +26,7 @@ export const serverQueryKeys = {
   sshHosts: () => ["server", "remote", "sshHosts"] as const,
   remoteCodexThreads: (input: RemoteListCodexThreadsInput) =>
     ["server", "remote", "codexThreads", input] as const,
+  synaraWorkers: () => ["server", "remote", "synaraWorkers"] as const,
   providerUsage: (provider: ProviderKind | null | undefined, homePath?: string | null) =>
     ["server", "providerUsage", provider ?? null, homePath ?? null] as const,
   allProviderUsage: () => ["server", "allProviderUsage"] as const,
@@ -39,6 +41,8 @@ export const serverQueryKeys = {
 export const serverMutationKeys = {
   stopLocalServer: () => ["server", "mutation", "stopLocalServer"] as const,
   probeSshHost: () => ["server", "mutation", "probeSshHost"] as const,
+  connectSynaraWorker: () => ["server", "mutation", "connectSynaraWorker"] as const,
+  disconnectSynaraWorker: () => ["server", "mutation", "disconnectSynaraWorker"] as const,
 };
 
 export function serverConfigQueryOptions() {
@@ -226,6 +230,21 @@ export function serverRemoteCodexThreadsQueryOptions(
   });
 }
 
+export function serverSynaraWorkersQueryOptions(input: { enabled?: boolean } = {}) {
+  return queryOptions({
+    queryKey: serverQueryKeys.synaraWorkers(),
+    queryFn: async () => {
+      const api = ensureNativeApi();
+      return api.remote.listSynaraWorkers();
+    },
+    enabled: input.enabled ?? true,
+    staleTime: 3_000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: false,
+  });
+}
+
 export function serverLocalServersQueryOptions(
   input:
     | boolean
@@ -312,6 +331,32 @@ export function serverProbeSshHostMutationOptions() {
     mutationFn: async (input: RemoteProbeSshHostInput) => {
       const api = ensureNativeApi();
       return api.remote.probeSshHost(input);
+    },
+  });
+}
+
+export function serverConnectSynaraWorkerMutationOptions(input: { queryClient: QueryClient }) {
+  return mutationOptions({
+    mutationKey: serverMutationKeys.connectSynaraWorker(),
+    mutationFn: async (worker: RemoteSynaraWorkerInput) => {
+      const api = ensureNativeApi();
+      return api.remote.connectSynaraWorker(worker);
+    },
+    onSettled: () => {
+      void input.queryClient.invalidateQueries({ queryKey: serverQueryKeys.synaraWorkers() });
+    },
+  });
+}
+
+export function serverDisconnectSynaraWorkerMutationOptions(input: { queryClient: QueryClient }) {
+  return mutationOptions({
+    mutationKey: serverMutationKeys.disconnectSynaraWorker(),
+    mutationFn: async (worker: RemoteSynaraWorkerInput) => {
+      const api = ensureNativeApi();
+      return api.remote.disconnectSynaraWorker(worker);
+    },
+    onSettled: () => {
+      void input.queryClient.invalidateQueries({ queryKey: serverQueryKeys.synaraWorkers() });
     },
   });
 }

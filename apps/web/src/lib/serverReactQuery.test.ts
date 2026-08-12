@@ -15,6 +15,7 @@ import {
   serverProviderUsageSnapshotQueryOptions,
   serverQueryKeys,
   serverRemoteCodexThreadsQueryOptions,
+  serverSynaraWorkersQueryOptions,
   serverSshHostsQueryOptions,
   sidebarLocalServersQueryOptions,
 } from "./serverReactQuery";
@@ -215,6 +216,16 @@ describe("serverRemoteCodexThreadsQueryOptions", () => {
       serverQueryKeys.remoteCodexThreads({ alias: "cluster", cwd: "/srv/training" }),
     );
     expect(options.enabled).toBe(false);
+  });
+});
+
+describe("serverSynaraWorkersQueryOptions", () => {
+  it("keeps worker lifecycle state on a dedicated cache key", () => {
+    const options = serverSynaraWorkersQueryOptions({ enabled: false });
+
+    expect(options.queryKey).toEqual(serverQueryKeys.synaraWorkers());
+    expect(options.enabled).toBe(false);
+    expect(options.retry).toBe(false);
   });
 });
 

@@ -100,6 +100,7 @@ import { recoverUnregisteredGitHubCheckout } from "./project/githubProjectRegist
 import { discoverOpenSshHosts } from "./remote/sshConfig";
 import { probeSshConnection } from "./remote/sshConnection";
 import { listRemoteCodexThreads } from "./remote/remoteCodexThreads";
+import { RemoteSynaraWorkerManager } from "./remote/remoteSynaraWorker";
 import { ProviderAdapterRegistry } from "./provider/Services/ProviderAdapterRegistry";
 import { ProviderHealth } from "./provider/Services/ProviderHealth";
 import { ProviderService } from "./provider/Services/ProviderService";
@@ -348,6 +349,8 @@ const makeWsRpcHandlersLayer = () =>
       const workspaceEntries = yield* WorkspaceEntries;
       const workspaceFileSystem = yield* WorkspaceFileSystem;
       const threadDiagnostics = yield* ThreadDiagnosticsQuery;
+      const remoteSynaraWorkers = new RemoteSynaraWorkerManager();
+      yield* Effect.addFinalizer(() => Effect.promise(() => remoteSynaraWorkers.stopAll()));
       // Optional so route-level tests and non-macOS builds can mount the RPC
       // group without a device engine; the handlers below then refuse cleanly
       // with the same unsupported-platform answer the backend would give.
@@ -1628,6 +1631,27 @@ const makeWsRpcHandlersLayer = () =>
               Effect.andThen(Effect.tryPromise(() => listRemoteCodexThreads(input))),
             ),
             "Failed to list remote Codex threads",
+          ),
+        [WS_METHODS.remoteListSynaraWorkers]: () =>
+          rpcEffect(
+            requireLocalSshOwner.pipe(
+              Effect.andThen(Effect.sync(() => ({ workers: remoteSynaraWorkers.list() }))),
+            ),
+            "Failed to list remote Synara workers",
+          ),
+        [WS_METHODS.remoteConnectSynaraWorker]: (input) =>
+          rpcEffect(
+            requireLocalSshOwner.pipe(
+              Effect.andThen(Effect.promise(() => remoteSynaraWorkers.connect(input.alias))),
+            ),
+            "Failed to connect remote Synara worker",
+          ),
+        [WS_METHODS.remoteDisconnectSynaraWorker]: (input) =>
+          rpcEffect(
+            requireLocalSshOwner.pipe(
+              Effect.andThen(Effect.promise(() => remoteSynaraWorkers.disconnect(input.alias))),
+            ),
+            "Failed to disconnect remote Synara worker",
           ),
         [WS_METHODS.serverGetSettings]: () =>
           rpcEffect(serverSettings.getSettingsView, "Failed to load server settings"),
