@@ -1040,13 +1040,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
 
   const updatePublishingConfigured =
     resolveGitHubPublishConfig() !== undefined || options.mockUpdates;
-  if (
-    options.platform === "mac" &&
-    shouldFinalizeMacUpdateZip({
-      signed: options.signed,
-      updatePublishingConfigured,
-    })
-  ) {
+  if (options.platform === "mac") {
     yield* stageMacAppSnapHelper(stageAppDir, options.arch, options.verbose);
   }
 
@@ -1142,7 +1136,13 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     });
   }
 
-  if (options.platform === "mac") {
+  if (
+    options.platform === "mac" &&
+    shouldFinalizeMacUpdateZip({
+      signed: options.signed,
+      updatePublishingConfigured,
+    })
+  ) {
     yield* assertPackagedMacDeviceHelper(stageDistDir, desktopPackageJson.productName ?? "Synara");
   }
 
