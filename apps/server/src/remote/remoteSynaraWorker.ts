@@ -70,7 +70,11 @@ export function remoteSynaraWorkerCommand(remotePort: number): string {
   if (!Number.isInteger(remotePort) || remotePort < 1 || remotePort > 65_535) {
     throw new Error("Remote Synara worker port is invalid.");
   }
-  return `exec "\${SHELL:-/bin/sh}" -lc 'exec synara --mode desktop --host 127.0.0.1 --port ${remotePort} --no-browser'`;
+  // Preserve the SSH channel's stdin on fd 3 before starting the background watcher. Shells may
+  // otherwise replace stdin with /dev/null for asynchronous commands. When the local owner dies
+  // (including a forced Electron backend shutdown), fd 3 reaches EOF; terminate the remote worker
+  // so it cannot retain the state.sqlite lifecycle lock as an orphan.
+  return `exec "\${SHELL:-/bin/sh}" -lc 'exec 3<&0; synara --mode desktop --host 127.0.0.1 --port ${remotePort} --no-browser & worker_pid=$!; (while IFS= read -r _ <&3; do :; done; kill -TERM "$worker_pid" 2>/dev/null) & watcher_pid=$!; trap "kill -TERM $worker_pid $watcher_pid 2>/dev/null" HUP INT TERM EXIT; wait "$worker_pid"; worker_status=$?; kill -TERM "$watcher_pid" 2>/dev/null; wait "$watcher_pid" 2>/dev/null; trap - EXIT; exit "$worker_status"'`;
 }
 
 export function remoteSynaraWorkerSshArgs(
@@ -169,6 +173,9 @@ export class RemoteSynaraWorkerManager {
   private readonly probeWorker: ProbeWorker;
   private readonly spawnWorker: SpawnWorker;
   private readonly startTimeoutMs: number;
+  private readonly onProcessExit = () => {
+    this.terminateAllImmediately();
+  };
 
   constructor(options: RemoteSynaraWorkerManagerOptions = {}) {
     this.allocateLocalPort = options.allocateLocalPort ?? allocateLoopbackPort;
@@ -176,6 +183,10 @@ export class RemoteSynaraWorkerManager {
     this.probeWorker = options.probeWorker ?? probeWorkerHttp;
     this.spawnWorker = options.spawnWorker ?? spawnRemoteSynaraWorker;
     this.startTimeoutMs = options.startTimeoutMs ?? WORKER_START_TIMEOUT_MS;
+    // Effect finalizers cover graceful server shutdown, but Electron may have to terminate the
+    // backend process after its shutdown deadline. Node's synchronous exit hook is the final
+    // ownership boundary: signal every SSH child before the OS can reparent it as an orphan.
+    process.once("exit", this.onProcessExit);
   }
 
   list(): RemoteSynaraWorkerConnection[] {
@@ -213,7 +224,17 @@ export class RemoteSynaraWorkerManager {
   }
 
   async stopAll(): Promise<void> {
-    await Promise.all(Array.from(this.workers.keys(), (alias) => this.disconnect(alias)));
+    this.terminateAllImmediately();
+    process.removeListener("exit", this.onProcessExit);
+  }
+
+  private terminateAllImmediately(): void {
+    for (const worker of this.workers.values()) {
+      if (worker.child.exitCode === null && worker.child.signalCode === null) {
+        worker.child.kill("SIGTERM");
+      }
+    }
+    this.workers.clear();
   }
 
   private async start(alias: SshHostAlias): Promise<RemoteSynaraWorkerConnection> {

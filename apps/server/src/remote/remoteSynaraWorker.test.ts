@@ -41,7 +41,7 @@ describe("remote Synara worker", () => {
       "-L",
       "127.0.0.1:43123:127.0.0.1:45123",
       "cluster",
-      `exec "\${SHELL:-/bin/sh}" -lc 'exec synara --mode desktop --host 127.0.0.1 --port 45123 --no-browser'`,
+      `exec "\${SHELL:-/bin/sh}" -lc 'exec 3<&0; synara --mode desktop --host 127.0.0.1 --port 45123 --no-browser & worker_pid=$!; (while IFS= read -r _ <&3; do :; done; kill -TERM "$worker_pid" 2>/dev/null) & watcher_pid=$!; trap "kill -TERM $worker_pid $watcher_pid 2>/dev/null" HUP INT TERM EXIT; wait "$worker_pid"; worker_status=$?; kill -TERM "$watcher_pid" 2>/dev/null; wait "$watcher_pid" 2>/dev/null; trap - EXIT; exit "$worker_status"'`,
     ]);
   });
 
@@ -109,5 +109,24 @@ describe("remote Synara worker", () => {
     });
     expect(child.kill).toHaveBeenCalledWith("SIGTERM");
     expect(manager.list()).toEqual([]);
+  });
+
+  it("stops every SSH child and removes its process-exit cleanup", async () => {
+    const exitListenersBefore = process.listenerCount("exit");
+    const child = fakeWorkerProcess();
+    const manager = new RemoteSynaraWorkerManager({
+      allocateLocalPort: async () => 43123,
+      allocateRemotePort: () => 45123,
+      probeWorker: async () => true,
+      spawnWorker: () => child,
+    });
+    expect(process.listenerCount("exit")).toBe(exitListenersBefore + 1);
+    await manager.connect("cluster");
+
+    await manager.stopAll();
+
+    expect(child.kill).toHaveBeenCalledWith("SIGTERM");
+    expect(manager.list()).toEqual([]);
+    expect(process.listenerCount("exit")).toBe(exitListenersBefore);
   });
 });
