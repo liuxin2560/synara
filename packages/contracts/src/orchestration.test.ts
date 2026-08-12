@@ -11,6 +11,7 @@ import {
   OrchestrationEvent,
   OrchestrationGetFullThreadDiffInput,
   OrchestrationGetTurnDiffInput,
+  OrchestrationImportThreadInput,
   OrchestrationLatestTurn,
   OrchestrationReadModel,
   ProjectCreatedPayload,
@@ -40,10 +41,30 @@ const decodeProjectCreateCommand = Schema.decodeUnknownEffect(ProjectCreateComma
 const decodeProjectCreatedPayload = Schema.decodeUnknownEffect(ProjectCreatedPayload);
 const decodeProjectMetaUpdatedPayload = Schema.decodeUnknownEffect(ProjectMetaUpdatedPayload);
 const decodeThreadTurnStartCommand = Schema.decodeUnknownEffect(ThreadTurnStartCommand);
+const decodeImportThreadInput = Schema.decodeUnknownEffect(OrchestrationImportThreadInput);
 
 it.effect("decodes the AI-reviewed auto runtime mode", () =>
   Effect.gen(function* () {
     assert.strictEqual(yield* decodeRuntimeMode("auto"), "auto");
+  }),
+);
+
+it.effect("defaults thread imports to copies and accepts original-session resume", () =>
+  Effect.gen(function* () {
+    assert.deepStrictEqual(
+      yield* decodeImportThreadInput({ threadId: "thread-1", externalId: "external-1" }),
+      { threadId: "thread-1", externalId: "external-1", mode: "copy" },
+    );
+    assert.equal(
+      (
+        yield* decodeImportThreadInput({
+          threadId: "thread-1",
+          externalId: "external-1",
+          mode: "resume-original",
+        })
+      ).mode,
+      "resume-original",
+    );
   }),
 );
 const decodeThreadTurnStartRequestedPayload = Schema.decodeUnknownEffect(

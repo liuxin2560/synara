@@ -131,3 +131,57 @@ it.effect("imports Codex history through a provider-owned fork", () =>
     assert.equal(dispatchedCommands.at(-1)?.type, "thread.session.set");
   }).pipe(Effect.provide(NodeServices.layer)),
 );
+
+it.effect("resumes the original Codex thread when explicitly requested", () =>
+  Effect.gen(function* () {
+    const fileSystem = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const externalId = "019fbe83-572e-7092-a84e-5ba7285ca2c5";
+    const session: ProviderSession = {
+      provider: "codex",
+      status: "ready",
+      runtimeMode: "full-access",
+      threadId,
+      resumeCursor: { threadId: externalId },
+      createdAt: importedAt,
+      updatedAt: importedAt,
+    };
+    const startSession = vi.fn(() => Effect.succeed(session));
+
+    const handler = makeImportThreadHandler({
+      fileSystem,
+      path,
+      platform: process.platform,
+      orchestrationEngine: {
+        dispatch: () => Effect.succeed({ sequence: 1 }),
+      } as unknown as OrchestrationEngineShape,
+      projectionSnapshotQuery: {
+        getThreadDetailById: () => Effect.succeed(Option.some(makeCodexThread())),
+        getProjectShellById: () => Effect.succeed(Option.none()),
+      } as unknown as ProjectionSnapshotQueryShape,
+      providerAdapterRegistry: {
+        getByProvider: () =>
+          Effect.succeed({
+            readThread: () => Effect.succeed({ threadId: externalId, turns: [] }),
+          } as never),
+      } as unknown as ProviderAdapterRegistryShape,
+      providerService: {
+        startSession,
+        stopSession: () => Effect.void,
+      } as unknown as ProviderServiceShape,
+    });
+
+    yield* handler({ threadId, externalId, mode: "resume-original" });
+
+    assert.deepEqual(startSession.mock.calls[0], [
+      threadId,
+      {
+        threadId,
+        provider: "codex",
+        modelSelection: { provider: "codex", model: "gpt-5.5" },
+        resumeCursor: { threadId: externalId },
+        runtimeMode: "full-access",
+      },
+    ]);
+  }).pipe(Effect.provide(NodeServices.layer)),
+);

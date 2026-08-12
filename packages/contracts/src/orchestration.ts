@@ -2468,6 +2468,9 @@ export type OrchestrationGetThreadDetailSnapshotResult =
 export const OrchestrationImportThreadInput = Schema.Struct({
   threadId: ThreadId,
   externalId: TrimmedNonEmptyString,
+  mode: Schema.optional(Schema.Literals(["copy", "resume-original"])).pipe(
+    Schema.withDecodingDefault(() => "copy" as const),
+  ),
 });
 export type OrchestrationImportThreadInput = typeof OrchestrationImportThreadInput.Type;
 

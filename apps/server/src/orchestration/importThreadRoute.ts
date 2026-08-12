@@ -412,7 +412,9 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
         : {}),
       modelSelection: thread.modelSelection,
       ...(thread.modelSelection.provider === "codex"
-        ? { forkSourceResumeCursor: importResumeCursor }
+        ? body.mode === "resume-original"
+          ? { resumeCursor: importResumeCursor }
+          : { forkSourceResumeCursor: importResumeCursor }
         : { resumeCursor: importResumeCursor }),
       runtimeMode: thread.runtimeMode,
     });
