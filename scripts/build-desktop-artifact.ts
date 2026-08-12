@@ -25,6 +25,7 @@ import { SYNARA_PRODUCTION_BUNDLE_ID } from "@synara/shared/desktopIdentity";
 import { parseBooleanEnvValue } from "./lib/env-bool.ts";
 import { finalizeSignedMacDmg } from "./lib/mac-dmg-finalize.ts";
 import { finalizeMacUpdateZip } from "./lib/mac-update-zip-finalize.ts";
+import { shouldFinalizeMacUpdateZip } from "./lib/mac-update-zip.ts";
 import {
   RELEASE_LOCKFILE_PATH,
   RELEASE_PATCHES_PATH,
@@ -1037,7 +1038,15 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
 
   yield* assertPlatformBuildResources(options.platform, stageResourcesDir, options.verbose);
 
-  if (options.platform === "mac") {
+  const updatePublishingConfigured =
+    resolveGitHubPublishConfig() !== undefined || options.mockUpdates;
+  if (
+    options.platform === "mac" &&
+    shouldFinalizeMacUpdateZip({
+      signed: options.signed,
+      updatePublishingConfigured,
+    })
+  ) {
     yield* stageMacAppSnapHelper(stageAppDir, options.arch, options.verbose);
   }
 
@@ -1179,6 +1188,10 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
         `[desktop-artifact] Removed stale macOS zip blockmap (${path.basename(finalizedZip.removedZipBlockmapPath)}).`,
       );
     }
+  } else if (options.platform === "mac") {
+    yield* Effect.log(
+      "[desktop-artifact] Skipping release-only macOS update zip finalization (no update feed configured).",
+    );
   }
 
   const stageEntries = yield* fs.readDirectory(stageDistDir);

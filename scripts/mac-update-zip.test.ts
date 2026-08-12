@@ -12,11 +12,27 @@ import {
   resolveMacUpdateManifestFileNames,
   resolveSingleMacUpdateZipFileName,
   resolveSingleTopLevelMacAppBundle,
+  shouldFinalizeMacUpdateZip,
   updateMacUpdateManifestZipEntry,
   validateMacUpdateManifestZipMetadata,
 } from "./lib/mac-update-zip.ts";
 
 describe("mac-update-zip", () => {
+  it("skips release-only zip finalization for an unsigned local build without a feed", () => {
+    assert.equal(
+      shouldFinalizeMacUpdateZip({ signed: false, updatePublishingConfigured: false }),
+      false,
+    );
+    assert.equal(
+      shouldFinalizeMacUpdateZip({ signed: true, updatePublishingConfigured: false }),
+      true,
+    );
+    assert.equal(
+      shouldFinalizeMacUpdateZip({ signed: false, updatePublishingConfigured: true }),
+      true,
+    );
+  });
+
   it("detects symlink entries from unzip verbose metadata", () => {
     assert.equal(
       isZipInfoSymlink(

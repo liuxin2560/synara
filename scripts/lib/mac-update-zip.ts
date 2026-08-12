@@ -22,6 +22,13 @@ export interface MacUpdateManifestZipValidation {
   readonly manifestHasZipSize: boolean;
 }
 
+export function shouldFinalizeMacUpdateZip(input: {
+  readonly signed: boolean;
+  readonly updatePublishingConfigured: boolean;
+}): boolean {
+  return input.signed || input.updatePublishingConfigured;
+}
+
 // The Electron framework must keep these symlinks inside the update zip; if a
 // zip tool dereferences them, Squirrel.Mac rejects the extracted app signature.
 export function buildMacUpdateZipSymlinkEntries(appBundleName: string): ReadonlyArray<string> {
