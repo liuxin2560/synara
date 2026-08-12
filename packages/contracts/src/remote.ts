@@ -63,3 +63,42 @@ export const RemoteProbeSshHostResult = Schema.Struct({
   lastError: Schema.optional(Schema.String.check(Schema.isMaxLength(2_000))),
 });
 export type RemoteProbeSshHostResult = typeof RemoteProbeSshHostResult.Type;
+
+export const RemoteCodexThreadStatus = Schema.Literals([
+  "notLoaded",
+  "idle",
+  "systemError",
+  "active",
+  "unknown",
+]);
+export type RemoteCodexThreadStatus = typeof RemoteCodexThreadStatus.Type;
+
+export const RemoteCodexThreadSummary = Schema.Struct({
+  hostAlias: SshHostAlias,
+  threadId: TrimmedNonEmptyString.check(Schema.isMaxLength(255)),
+  title: TrimmedNonEmptyString.check(Schema.isMaxLength(240)),
+  preview: Schema.String.check(Schema.isMaxLength(2_000)),
+  cwd: TrimmedNonEmptyString.check(Schema.isMaxLength(4_096)),
+  createdAt: Schema.Number.check(Schema.isGreaterThanOrEqualTo(0)),
+  updatedAt: Schema.Number.check(Schema.isGreaterThanOrEqualTo(0)),
+  status: RemoteCodexThreadStatus,
+  source: TrimmedNonEmptyString.check(Schema.isMaxLength(255)),
+  parentThreadId: Schema.optional(TrimmedNonEmptyString.check(Schema.isMaxLength(255))),
+});
+export type RemoteCodexThreadSummary = typeof RemoteCodexThreadSummary.Type;
+
+export const RemoteListCodexThreadsInput = Schema.Struct({
+  alias: SshHostAlias,
+  cursor: Schema.optional(TrimmedNonEmptyString.check(Schema.isMaxLength(4_096))),
+  limit: Schema.optional(
+    Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 100 })),
+  ),
+  cwd: Schema.optional(TrimmedNonEmptyString.check(Schema.isMaxLength(4_096))),
+});
+export type RemoteListCodexThreadsInput = typeof RemoteListCodexThreadsInput.Type;
+
+export const RemoteListCodexThreadsResult = Schema.Struct({
+  threads: Schema.Array(RemoteCodexThreadSummary).check(Schema.isMaxLength(100)),
+  nextCursor: Schema.NullOr(TrimmedNonEmptyString.check(Schema.isMaxLength(4_096))),
+});
+export type RemoteListCodexThreadsResult = typeof RemoteListCodexThreadsResult.Type;

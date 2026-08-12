@@ -1,6 +1,7 @@
 import type {
   ProviderKind,
   RemoteProbeSshHostInput,
+  RemoteListCodexThreadsInput,
   ServerConfig,
   ServerListProviderUsageInput,
   ServerProviderStatus,
@@ -22,6 +23,8 @@ export const serverQueryKeys = {
   worktrees: () => ["server", "worktrees"] as const,
   localServers: () => ["server", "localServers"] as const,
   sshHosts: () => ["server", "remote", "sshHosts"] as const,
+  remoteCodexThreads: (input: RemoteListCodexThreadsInput) =>
+    ["server", "remote", "codexThreads", input] as const,
   providerUsage: (provider: ProviderKind | null | undefined, homePath?: string | null) =>
     ["server", "providerUsage", provider ?? null, homePath ?? null] as const,
   allProviderUsage: () => ["server", "allProviderUsage"] as const,
@@ -199,6 +202,24 @@ export function serverSshHostsQueryOptions(input: { enabled?: boolean } = {}) {
     },
     enabled: input.enabled ?? true,
     staleTime: 30_000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: false,
+  });
+}
+
+export function serverRemoteCodexThreadsQueryOptions(
+  input: RemoteListCodexThreadsInput & { enabled?: boolean },
+) {
+  const { enabled = true, ...request } = input;
+  return queryOptions({
+    queryKey: serverQueryKeys.remoteCodexThreads(request),
+    queryFn: async () => {
+      const api = ensureNativeApi();
+      return api.remote.listCodexThreads(request);
+    },
+    enabled,
+    staleTime: 10_000,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     retry: false,

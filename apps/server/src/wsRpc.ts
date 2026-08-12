@@ -99,6 +99,7 @@ import { discoverSkillsCatalog, synaraSkillsDir } from "./provider/skillsCatalog
 import { recoverUnregisteredGitHubCheckout } from "./project/githubProjectRegistration";
 import { discoverOpenSshHosts } from "./remote/sshConfig";
 import { probeSshConnection } from "./remote/sshConnection";
+import { listRemoteCodexThreads } from "./remote/remoteCodexThreads";
 import { ProviderAdapterRegistry } from "./provider/Services/ProviderAdapterRegistry";
 import { ProviderHealth } from "./provider/Services/ProviderHealth";
 import { ProviderService } from "./provider/Services/ProviderService";
@@ -1620,6 +1621,13 @@ const makeWsRpcHandlersLayer = () =>
               ),
             ),
             "Failed to probe SSH host",
+          ),
+        [WS_METHODS.remoteListCodexThreads]: (input) =>
+          rpcEffect(
+            requireLocalSshOwner.pipe(
+              Effect.andThen(Effect.tryPromise(() => listRemoteCodexThreads(input))),
+            ),
+            "Failed to list remote Codex threads",
           ),
         [WS_METHODS.serverGetSettings]: () =>
           rpcEffect(serverSettings.getSettingsView, "Failed to load server settings"),

@@ -139,6 +139,8 @@ import {
 import { ProviderCompactThreadInput } from "./provider";
 import {
   RemoteListSshHostsResult,
+  RemoteListCodexThreadsInput,
+  RemoteListCodexThreadsResult,
   RemoteProbeSshHostInput,
   RemoteProbeSshHostResult,
 } from "./remote";
@@ -909,6 +911,12 @@ export const WsRemoteProbeSshHostRpc = Rpc.make(WS_METHODS.remoteProbeSshHost, {
   error: WsRpcError,
 });
 
+export const WsRemoteListCodexThreadsRpc = Rpc.make(WS_METHODS.remoteListCodexThreads, {
+  payload: RemoteListCodexThreadsInput,
+  success: RemoteListCodexThreadsResult,
+  error: WsRpcError,
+});
+
 export const WsServerGetSettingsRpc = Rpc.make(WS_METHODS.serverGetSettings, {
   payload: Schema.Struct({}),
   success: ServerGetSettingsResult,
@@ -1286,6 +1294,7 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsServerGetEnvironmentRpc,
   WsRemoteListSshHostsRpc,
   WsRemoteProbeSshHostRpc,
+  WsRemoteListCodexThreadsRpc,
   WsServerGetSettingsRpc,
   WsServerUpdateSettingsRpc,
   WsServerRefreshProvidersRpc,

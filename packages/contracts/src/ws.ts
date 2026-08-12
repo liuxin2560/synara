@@ -233,6 +233,7 @@ export const WS_METHODS = {
   serverGetEnvironment: "server.getEnvironment",
   remoteListSshHosts: "remote.listSshHosts",
   remoteProbeSshHost: "remote.probeSshHost",
+  remoteListCodexThreads: "remote.listCodexThreads",
   serverGetSettings: "server.getSettings",
   serverUpdateSettings: "server.updateSettings",
   serverRefreshProviders: "server.refreshProviders",

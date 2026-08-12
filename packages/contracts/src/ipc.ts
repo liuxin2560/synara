@@ -164,6 +164,8 @@ import type {
 import type { StudioListThreadOutputsInput, StudioListThreadOutputsResult } from "./studio";
 import type {
   RemoteListSshHostsResult,
+  RemoteListCodexThreadsInput,
+  RemoteListCodexThreadsResult,
   RemoteProbeSshHostInput,
   RemoteProbeSshHostResult,
 } from "./remote";
@@ -774,6 +776,7 @@ export interface NativeApi {
   remote: {
     listSshHosts: () => Promise<RemoteListSshHostsResult>;
     probeSshHost: (input: RemoteProbeSshHostInput) => Promise<RemoteProbeSshHostResult>;
+    listCodexThreads: (input: RemoteListCodexThreadsInput) => Promise<RemoteListCodexThreadsResult>;
   };
   stats: {
     getProfileStats: (input: StatsGetProfileStatsInput) => Promise<StatsGetProfileStatsResult>;

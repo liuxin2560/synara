@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   RemoteEnvironmentConnection,
   RemoteListSshHostsResult,
+  RemoteListCodexThreadsInput,
   RemoteProbeSshHostInput,
   SshHostAlias,
   SshHostConfigSummary,
@@ -79,5 +80,11 @@ describe("SSH remote contracts", () => {
     expect(() =>
       Schema.decodeUnknownSync(RemoteProbeSshHostInput)({ alias: "-oProxyCommand=bad" }),
     ).toThrow();
+  });
+
+  it("accepts an omitted remote Codex page size for the server default", () => {
+    expect(
+      Schema.decodeUnknownSync(RemoteListCodexThreadsInput)({ alias: "cluster" }),
+    ).toEqual({ alias: "cluster" });
   });
 });

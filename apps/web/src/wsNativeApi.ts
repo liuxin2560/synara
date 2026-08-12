@@ -724,6 +724,7 @@ export function createWsNativeApi(): NativeApi {
     remote: {
       listSshHosts: () => transport.request(WS_METHODS.remoteListSshHosts),
       probeSshHost: (input) => transport.request(WS_METHODS.remoteProbeSshHost, input),
+      listCodexThreads: (input) => transport.request(WS_METHODS.remoteListCodexThreads, input),
     },
     stats: {
       getProfileStats: (input) => transport.request(WS_METHODS.statsGetProfileStats, input),

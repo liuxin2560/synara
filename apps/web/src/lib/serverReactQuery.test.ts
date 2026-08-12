@@ -14,6 +14,7 @@ import {
   serverLocalServersQueryOptions,
   serverProviderUsageSnapshotQueryOptions,
   serverQueryKeys,
+  serverRemoteCodexThreadsQueryOptions,
   serverSshHostsQueryOptions,
   sidebarLocalServersQueryOptions,
 } from "./serverReactQuery";
@@ -199,6 +200,21 @@ describe("serverSshHostsQueryOptions", () => {
 
   it("can stay disabled until the remote sidebar is visible", () => {
     expect(serverSshHostsQueryOptions({ enabled: false }).enabled).toBe(false);
+  });
+});
+
+describe("serverRemoteCodexThreadsQueryOptions", () => {
+  it("keys remote sessions by SSH host and remote cwd", () => {
+    const options = serverRemoteCodexThreadsQueryOptions({
+      alias: "cluster",
+      cwd: "/srv/training",
+      enabled: false,
+    });
+
+    expect(options.queryKey).toEqual(
+      serverQueryKeys.remoteCodexThreads({ alias: "cluster", cwd: "/srv/training" }),
+    );
+    expect(options.enabled).toBe(false);
   });
 });
 
