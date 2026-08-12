@@ -4,7 +4,7 @@
 // Layer: Web utility
 // Exports: resolveWsHttpUrl, toAttachmentPreviewUrl
 
-import { readActiveRemoteBackendWsUrl } from "./remoteBackendTarget";
+import { readRemoteFrameBackendWsUrl } from "./remoteBackendTarget";
 
 // Build a fully-qualified HTTP URL for `rawPath` against the same server the WS connection uses.
 // On desktop the page is served from a custom protocol scheme, so <img>/<a download> with a
@@ -13,7 +13,7 @@ import { readActiveRemoteBackendWsUrl } from "./remoteBackendTarget";
 // request without touching cookies.
 export function resolveWsHttpUrl(rawPath: string): string {
   if (typeof window === "undefined") return rawPath;
-  const remoteBackendWsUrl = readActiveRemoteBackendWsUrl();
+  const remoteBackendWsUrl = readRemoteFrameBackendWsUrl();
   const bridgeWsUrl = window.desktopBridge?.getWsUrl?.();
   const envWsUrl = import.meta.env.VITE_WS_URL as string | undefined;
   const wsCandidate =

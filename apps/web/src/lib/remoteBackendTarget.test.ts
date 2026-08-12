@@ -2,12 +2,18 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildActiveRemoteBackendTarget,
-  clearActiveRemoteBackendTarget,
+  buildRemoteThreadFrameUrl,
+  clearRemoteThreadSelection,
+  isRemoteThreadFrame,
   parseActiveRemoteBackendTarget,
-  readActiveRemoteBackendTarget,
+  parseRemoteThreadFrameName,
+  readRemoteFrameBackendWsUrl,
+  readRemoteThreadFrameSelectionId,
+  readRemoteThreadSelection,
   remoteBackendWsUrl,
   replacePendingRemoteThread,
-  writeActiveRemoteBackendTarget,
+  serializeRemoteThreadFrameName,
+  writeRemoteThreadSelection,
 } from "./remoteBackendTarget";
 
 function memoryStorage(): Storage {
@@ -49,9 +55,9 @@ describe("remote backend target", () => {
     }
   });
 
-  it("persists a pending original-session resume only for the renderer session", () => {
+  it("persists each selected remote session independently for the renderer session", () => {
     const storage = memoryStorage();
-    const ids = ["import-id", "synara-thread-id"];
+    const ids = ["selection-id", "synara-thread-id"];
     const target = buildActiveRemoteBackendTarget({
       alias: "cluster2",
       httpUrl: "http://127.0.0.1:43123",
@@ -63,16 +69,43 @@ describe("remote backend target", () => {
       randomId: () => ids.shift()!,
     });
 
-    writeActiveRemoteBackendTarget(target, storage);
-    expect(readActiveRemoteBackendTarget(storage)).toEqual(target);
+    expect(writeRemoteThreadSelection(target, storage)).toBe("selection-id");
+    expect(readRemoteThreadSelection("selection-id", storage)).toEqual(target);
     expect(target.pendingThread?.mode).toBe("resume-original");
 
-    const withoutPending = replacePendingRemoteThread(target, undefined);
-    writeActiveRemoteBackendTarget(withoutPending, storage);
-    expect(readActiveRemoteBackendTarget(storage)).toEqual(withoutPending);
+    const copied = replacePendingRemoteThread(target, {
+      ...target.pendingThread!,
+      mode: "copy",
+    });
+    expect(copied.pendingThread?.mode).toBe("copy");
 
-    clearActiveRemoteBackendTarget(storage);
-    expect(readActiveRemoteBackendTarget(storage)).toBeNull();
+    clearRemoteThreadSelection("selection-id", storage);
+    expect(readRemoteThreadSelection("selection-id", storage)).toBeNull();
+  });
+
+  it("builds an isolated frame URL without changing the parent backend", () => {
+    const target = buildActiveRemoteBackendTarget({
+      alias: "cluster2",
+      httpUrl: "http://127.0.0.1:43123",
+      thread: { externalId: "codex-1", title: "Remote task", cwd: "/srv/project" },
+      randomId: (() => {
+        const ids = ["selection-id", "synara-id"];
+        return () => ids.shift()!;
+      })(),
+    });
+    const frameUrl = buildRemoteThreadFrameUrl("synara://app/index.html?local=value#/local-thread");
+    const frameName = serializeRemoteThreadFrameName(target);
+
+    expect(frameUrl).toBe("synara://app/index.html#/");
+    expect(parseRemoteThreadFrameName(frameName)).toEqual({
+      version: 1,
+      selectionId: "selection-id",
+      httpUrl: "http://127.0.0.1:43123",
+    });
+    expect(isRemoteThreadFrame(frameName)).toBe(true);
+    expect(readRemoteThreadFrameSelectionId(frameName)).toBe("selection-id");
+    expect(readRemoteFrameBackendWsUrl(frameName)).toBe("ws://127.0.0.1:43123/");
+    expect(isRemoteThreadFrame("ordinary-frame")).toBe(false);
   });
 
   it("rejects malformed pending imports instead of partially trusting them", () => {

@@ -11,6 +11,7 @@ import {
   RestoreOrCreateChatRoute,
   type RestoreRouteResolver,
 } from "../components/RestoreOrCreateChatRoute";
+import { RemoteThreadFrameBootstrap } from "../components/RemoteThreadFrame";
 import { readSidebarUiState } from "../components/Sidebar.uiState";
 import { useComposerDraftStore } from "../composerDraftStore";
 import { useHandleNewChat } from "../hooks/useHandleNewChat";
@@ -20,6 +21,7 @@ import { resolveSplitViewThreadIds, useSplitViewStore } from "../splitViewStore"
 import { EMPTY_THREAD_IDS, useStore } from "../store";
 import { useWorkspacePathsStore } from "../workspacePathsStore";
 import { resolveChatIndexRestoreRoute, type ChatIndexLandingSpace } from "./-chatIndexRoute.logic";
+import { isRemoteThreadFrame } from "../lib/remoteBackendTarget";
 
 /**
  * Set by the Space switcher when the selected Space has nothing to open (`spaceKey`, so Void
@@ -31,7 +33,7 @@ export interface ChatIndexSearch {
   readonly space?: string | undefined;
 }
 
-function ChatIndexRouteView() {
+function LocalChatIndexRouteView() {
   const { handleNewChat } = useHandleNewChat();
   const landingSpaceKey = Route.useSearch({ select: (search) => search.space });
   const threadIds = useStore((state) => state.threadIds ?? EMPTY_THREAD_IDS);
@@ -96,6 +98,10 @@ function ChatIndexRouteView() {
       createFreshChat={createFreshChat}
     />
   );
+}
+
+function ChatIndexRouteView() {
+  return isRemoteThreadFrame() ? <RemoteThreadFrameBootstrap /> : <LocalChatIndexRouteView />;
 }
 
 export const Route = createFileRoute("/_chat/")({

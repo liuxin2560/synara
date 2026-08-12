@@ -26,6 +26,7 @@ import {
   resolveNewThreadTarget,
 } from "../lib/projectShortcutTargets";
 import { resolveInheritedThreadContext } from "../lib/threadBootstrap";
+import { isRemoteThreadFrame } from "../lib/remoteBackendTarget";
 import { isTerminalFocused } from "../lib/terminalFocus";
 import { serverConfigQueryOptions } from "../lib/serverReactQuery";
 import { startFreshChatForActiveSurface } from "../lib/startContainerChat";
@@ -560,14 +561,15 @@ const SIDEBAR_GAP_CLASS =
 const SIDEBAR_INNER_CLASS = "app-sidebar-surface";
 
 function ChatRouteLayout() {
+  const remoteThreadFrame = isRemoteThreadFrame();
   const isEditorView = useLocation({
     select: (location) => (location.search as { view?: unknown }).view === "editor",
   });
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const resolvedSidebarOpen = isEditorView ? false : sidebarOpen;
+  const resolvedSidebarOpen = isEditorView || remoteThreadFrame ? false : sidebarOpen;
 
   // The thread sidebar always lives on the left; the right dock is a separate surface.
-  const sidebarElement = (
+  const sidebarElement = remoteThreadFrame ? null : (
     <Sidebar
       side="left"
       collapsible="offcanvas"
@@ -591,7 +593,7 @@ function ChatRouteLayout() {
   // `data-sidebar-side` on the provider selects the seam geometry.
   const mainContentShell = (
     <div className="relative flex h-svh min-h-0 min-w-0 flex-1">
-      {isEditorView ? null : (
+      {isEditorView || remoteThreadFrame ? null : (
         <SidebarInstanceProvider side="left" resizable={THREAD_SIDEBAR_RESIZABLE}>
           <SidebarRail placement="content-seam" />
         </SidebarInstanceProvider>
@@ -608,8 +610,8 @@ function ChatRouteLayout() {
       className="bg-[var(--app-shell-background)]"
       data-sidebar-side="left"
     >
-      <ThreadRetentionMaintenanceToast />
-      <ChatRouteGlobalShortcuts />
+      {remoteThreadFrame ? null : <ThreadRetentionMaintenanceToast />}
+      {remoteThreadFrame ? null : <ChatRouteGlobalShortcuts />}
       {sidebarElement}
       {mainContentShell}
     </SidebarProvider>

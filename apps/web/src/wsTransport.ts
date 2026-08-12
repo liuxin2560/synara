@@ -64,7 +64,7 @@ import * as Socket from "effect/unstable/socket/Socket";
 
 import { APP_VERSION } from "./branding";
 import { useDeviceStateStore } from "./deviceStateStore";
-import { readActiveRemoteBackendWsUrl } from "./lib/remoteBackendTarget";
+import { readRemoteFrameBackendWsUrl } from "./lib/remoteBackendTarget";
 import {
   buildThreadSubscribeInput,
   resetThreadDetailResumeCursors,
@@ -212,7 +212,7 @@ function resolveRpcUrl(rawUrl: string, path: string): string {
 
 function rawSocketUrl(explicitUrl: string | null): string {
   if (explicitUrl) return explicitUrl;
-  const remoteBackendUrl = readActiveRemoteBackendWsUrl();
+  const remoteBackendUrl = readRemoteFrameBackendWsUrl();
   if (remoteBackendUrl) return remoteBackendUrl;
   const bridgeUrl = window.desktopBridge?.getWsUrl();
   const envUrl = import.meta.env.VITE_WS_URL as string | undefined;

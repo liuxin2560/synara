@@ -4,15 +4,14 @@ import type {
   SshHostConfigSummary,
 } from "@synara/contracts";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { RemoteSshConnectionSetting } from "~/appSettings";
 import { FolderOpenIcon, GlobeIcon } from "~/lib/icons";
 import {
   buildActiveRemoteBackendTarget,
-  readActiveRemoteBackendTarget,
-  reloadAppAtRoot,
-  writeActiveRemoteBackendTarget,
+  writeRemoteThreadSelection,
 } from "~/lib/remoteBackendTarget";
 import { cn } from "~/lib/utils";
 import {
@@ -33,7 +32,6 @@ import {
   remoteWorkerStatusPresentation,
   selectEnabledRemoteHosts,
 } from "./RemoteEnvironmentsSidebar.logic";
-import { ActiveRemoteBackendSidebar } from "./ActiveRemoteBackendSidebar";
 
 const MAX_VISIBLE_THREADS_PER_FOLDER = 5;
 
@@ -48,7 +46,7 @@ function RemoteThreadRow(props: {
       disabled={props.opening}
       title={
         props.opening
-          ? "Connecting to the remote workspace"
+          ? "Opening the remote session"
           : props.thread.preview || props.thread.title
       }
       className="h-7 pl-9 text-[length:var(--app-font-size-ui,12px)] disabled:cursor-default disabled:opacity-65"
@@ -81,7 +79,7 @@ function RemoteHostSection(props: {
   const connectDisabled = props.worker?.state === "ready" || props.worker?.state === "connecting";
   const connectionTitle = props.worker?.lastError
     ? `${presentation.label}: ${props.worker.lastError}`
-    : `${presentation.label}. Click to connect the full remote backend.`;
+    : `${presentation.label} over SSH.`;
 
   return (
     <SidebarMenuItem>
@@ -184,6 +182,7 @@ function LocalRemoteEnvironmentsSidebar(props: {
   onOpenThread?: (thread: RemoteCodexThreadSummary) => void;
 }) {
   const enabled = props.enabled ?? true;
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const autoConnectAttempts = useRef(new Set<string>());
   const [expandedHosts, setExpandedHosts] = useState<ReadonlySet<string>>(new Set());
@@ -297,8 +296,11 @@ function LocalRemoteEnvironmentsSidebar(props: {
                           cwd: thread.cwd,
                         },
                       });
-                      writeActiveRemoteBackendTarget(target);
-                      reloadAppAtRoot();
+                      const selectionId = writeRemoteThreadSelection(target);
+                      void navigate({
+                        to: "/remote/$selectionId",
+                        params: { selectionId },
+                      }).finally(() => setOpeningThreadId(null));
                     })
                     .catch((error: unknown) => {
                       setOpeningThreadId(null);
@@ -307,7 +309,7 @@ function LocalRemoteEnvironmentsSidebar(props: {
                         message:
                           error instanceof Error
                             ? error.message
-                            : "The remote workspace could not be opened.",
+                            : "The remote session could not be opened.",
                       });
                     });
                 }}
@@ -325,8 +327,6 @@ export function RemoteEnvironmentsSidebar(props: {
   enabled?: boolean;
   onOpenThread?: (thread: RemoteCodexThreadSummary) => void;
 }) {
-  const activeTarget = readActiveRemoteBackendTarget();
-  if (activeTarget) return <ActiveRemoteBackendSidebar initialTarget={activeTarget} />;
   if (props.enabled === false) return null;
   return <LocalRemoteEnvironmentsSidebar {...props} />;
 }

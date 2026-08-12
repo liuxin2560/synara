@@ -20,6 +20,7 @@ import { Route as ChatStudioIndexRouteImport } from './routes/_chat.studio.index
 import { Route as ChatPullRequestsIndexRouteImport } from './routes/_chat.pull-requests.index'
 import { Route as ChatKanbanIndexRouteImport } from './routes/_chat.kanban.index'
 import { Route as ChatAutomationsIndexRouteImport } from './routes/_chat.automations.index'
+import { Route as ChatRemoteSelectionIdRouteImport } from './routes/_chat.remote.$selectionId'
 import { Route as ChatKanbanProjectIdRouteImport } from './routes/_chat.kanban.$projectId'
 import { Route as ChatAutomationsAutomationIdRouteImport } from './routes/_chat.automations.$automationId'
 
@@ -77,6 +78,11 @@ const ChatAutomationsIndexRoute = ChatAutomationsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ChatAutomationsRoute,
 } as any)
+const ChatRemoteSelectionIdRoute = ChatRemoteSelectionIdRouteImport.update({
+  id: '/remote/$selectionId',
+  path: '/remote/$selectionId',
+  getParentRoute: () => ChatRoute,
+} as any)
 const ChatKanbanProjectIdRoute = ChatKanbanProjectIdRouteImport.update({
   id: '/kanban/$projectId',
   path: '/kanban/$projectId',
@@ -98,6 +104,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof ChatSettingsRoute
   '/automations/$automationId': typeof ChatAutomationsAutomationIdRoute
   '/kanban/$projectId': typeof ChatKanbanProjectIdRoute
+  '/remote/$selectionId': typeof ChatRemoteSelectionIdRoute
   '/automations/': typeof ChatAutomationsIndexRoute
   '/kanban/': typeof ChatKanbanIndexRoute
   '/pull-requests/': typeof ChatPullRequestsIndexRoute
@@ -110,6 +117,7 @@ export interface FileRoutesByTo {
   '/': typeof ChatIndexRoute
   '/automations/$automationId': typeof ChatAutomationsAutomationIdRoute
   '/kanban/$projectId': typeof ChatKanbanProjectIdRoute
+  '/remote/$selectionId': typeof ChatRemoteSelectionIdRoute
   '/automations': typeof ChatAutomationsIndexRoute
   '/kanban': typeof ChatKanbanIndexRoute
   '/pull-requests': typeof ChatPullRequestsIndexRoute
@@ -126,6 +134,7 @@ export interface FileRoutesById {
   '/_chat/': typeof ChatIndexRoute
   '/_chat/automations/$automationId': typeof ChatAutomationsAutomationIdRoute
   '/_chat/kanban/$projectId': typeof ChatKanbanProjectIdRoute
+  '/_chat/remote/$selectionId': typeof ChatRemoteSelectionIdRoute
   '/_chat/automations/': typeof ChatAutomationsIndexRoute
   '/_chat/kanban/': typeof ChatKanbanIndexRoute
   '/_chat/pull-requests/': typeof ChatPullRequestsIndexRoute
@@ -142,6 +151,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/automations/$automationId'
     | '/kanban/$projectId'
+    | '/remote/$selectionId'
     | '/automations/'
     | '/kanban/'
     | '/pull-requests/'
@@ -154,6 +164,7 @@ export interface FileRouteTypes {
     | '/'
     | '/automations/$automationId'
     | '/kanban/$projectId'
+    | '/remote/$selectionId'
     | '/automations'
     | '/kanban'
     | '/pull-requests'
@@ -169,6 +180,7 @@ export interface FileRouteTypes {
     | '/_chat/'
     | '/_chat/automations/$automationId'
     | '/_chat/kanban/$projectId'
+    | '/_chat/remote/$selectionId'
     | '/_chat/automations/'
     | '/_chat/kanban/'
     | '/_chat/pull-requests/'
@@ -258,6 +270,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatAutomationsIndexRouteImport
       parentRoute: typeof ChatAutomationsRoute
     }
+    '/_chat/remote/$selectionId': {
+      id: '/_chat/remote/$selectionId'
+      path: '/remote/$selectionId'
+      fullPath: '/remote/$selectionId'
+      preLoaderRoute: typeof ChatRemoteSelectionIdRouteImport
+      parentRoute: typeof ChatRoute
+    }
     '/_chat/kanban/$projectId': {
       id: '/_chat/kanban/$projectId'
       path: '/kanban/$projectId'
@@ -308,6 +327,7 @@ interface ChatRouteChildren {
   ChatSettingsRoute: typeof ChatSettingsRoute
   ChatIndexRoute: typeof ChatIndexRoute
   ChatKanbanProjectIdRoute: typeof ChatKanbanProjectIdRoute
+  ChatRemoteSelectionIdRoute: typeof ChatRemoteSelectionIdRoute
   ChatKanbanIndexRoute: typeof ChatKanbanIndexRoute
   ChatStudioIndexRoute: typeof ChatStudioIndexRoute
 }
@@ -320,6 +340,7 @@ const ChatRouteChildren: ChatRouteChildren = {
   ChatSettingsRoute: ChatSettingsRoute,
   ChatIndexRoute: ChatIndexRoute,
   ChatKanbanProjectIdRoute: ChatKanbanProjectIdRoute,
+  ChatRemoteSelectionIdRoute: ChatRemoteSelectionIdRoute,
   ChatKanbanIndexRoute: ChatKanbanIndexRoute,
   ChatStudioIndexRoute: ChatStudioIndexRoute,
 }
