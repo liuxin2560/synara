@@ -1,0 +1,41 @@
+import { Schema } from "effect";
+
+import { TrimmedNonEmptyString } from "./baseSchemas";
+import { ExecutionEnvironmentDescriptor } from "./environment";
+
+/** A concrete OpenSSH Host alias. Pattern-only entries are never exposed as connectable hosts. */
+export const SshHostAlias = TrimmedNonEmptyString.check(
+  Schema.isMaxLength(255),
+  Schema.isPattern(/^(?!-)(?!.*[\s*?!\[\]]).+$/),
+);
+export type SshHostAlias = typeof SshHostAlias.Type;
+
+export const SshHostConfigSummary = Schema.Struct({
+  alias: SshHostAlias,
+  hostname: TrimmedNonEmptyString.check(Schema.isMaxLength(255)),
+  user: TrimmedNonEmptyString.check(Schema.isMaxLength(255)),
+  port: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 65_535 })),
+  proxyJump: Schema.optional(TrimmedNonEmptyString.check(Schema.isMaxLength(2_048))),
+});
+export type SshHostConfigSummary = typeof SshHostConfigSummary.Type;
+
+export const RemoteConnectionState = Schema.Literals([
+  "disconnected",
+  "connecting",
+  "ready",
+  "unreachable",
+  "auth-required",
+  "host-key-error",
+  "incompatible",
+  "error",
+]);
+export type RemoteConnectionState = typeof RemoteConnectionState.Type;
+
+export const RemoteEnvironmentConnection = Schema.Struct({
+  transport: Schema.Literal("ssh"),
+  host: SshHostConfigSummary,
+  state: RemoteConnectionState,
+  environment: Schema.optional(ExecutionEnvironmentDescriptor),
+  lastError: Schema.optional(Schema.String.check(Schema.isMaxLength(2_000))),
+});
+export type RemoteEnvironmentConnection = typeof RemoteEnvironmentConnection.Type;

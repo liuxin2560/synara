@@ -32,6 +32,7 @@ export * from "./pullRequests";
 export * from "./orchestration";
 export * from "./editor";
 export * from "./environment";
+export * from "./remote";
 export * from "./project";
 export * from "./studio";
 export * from "./filesystem";
