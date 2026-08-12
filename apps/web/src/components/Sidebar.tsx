@@ -189,6 +189,7 @@ import {
 import { PreviewCard, PreviewCardPopup, PreviewCardTrigger } from "./ui/preview-card";
 import { hasUnreadActivity as hasUnreadActivityOutsideActiveThread } from "./SidebarActivityView.logic";
 import { SidebarActivityView } from "./SidebarActivityView";
+import { RemoteEnvironmentsSidebar } from "./RemoteEnvironmentsSidebar";
 import { SidebarIconButton, sidebarIconButtonSlotClass } from "./SidebarIconButton";
 import { SidebarLeadingIcon } from "./SidebarLeadingIcon";
 import { SidebarMetaChipStack } from "./SidebarMetaChip";
@@ -6068,6 +6069,9 @@ export default function Sidebar() {
             </div>
           </>
         )}
+        <RemoteEnvironmentsSidebar
+          enabled={!isOnSettings && !isOnStudio && !activityViewEnabled}
+        />
         {!isOnSettings && !isOnStudio && !activityViewEnabled && chatsSectionVisible ? (
           // sidebar-surface-enter: mounts on the Studio -> Projects switch, so it
           // animates in step with the keyed surface wrapper above.
