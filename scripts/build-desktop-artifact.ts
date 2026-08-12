@@ -1136,13 +1136,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     });
   }
 
-  if (
-    options.platform === "mac" &&
-    shouldFinalizeMacUpdateZip({
-      signed: options.signed,
-      updatePublishingConfigured,
-    })
-  ) {
+  if (options.platform === "mac") {
     yield* assertPackagedMacDeviceHelper(stageDistDir, desktopPackageJson.productName ?? "Synara");
   }
 
@@ -1168,7 +1162,13 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     );
   }
 
-  if (options.platform === "mac") {
+  if (
+    options.platform === "mac" &&
+    shouldFinalizeMacUpdateZip({
+      signed: options.signed,
+      updatePublishingConfigured,
+    })
+  ) {
     yield* Effect.log("[desktop-artifact] Repacking and validating macOS update zip...");
     const finalizedZip = yield* Effect.tryPromise({
       try: () =>
