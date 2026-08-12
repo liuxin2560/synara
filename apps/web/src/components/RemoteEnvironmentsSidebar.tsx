@@ -7,6 +7,12 @@ import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/rea
 import { useMemo, useState } from "react";
 
 import { FolderOpenIcon, GlobeIcon } from "~/lib/icons";
+import {
+  buildActiveRemoteBackendTarget,
+  readActiveRemoteBackendTarget,
+  reloadAppAtRoot,
+  writeActiveRemoteBackendTarget,
+} from "~/lib/remoteBackendTarget";
 import { cn } from "~/lib/utils";
 import {
   serverConnectSynaraWorkerMutationOptions,
@@ -25,29 +31,26 @@ import {
   groupRemoteCodexThreadsByCwd,
   remoteWorkerStatusPresentation,
 } from "./RemoteEnvironmentsSidebar.logic";
+import { ActiveRemoteBackendSidebar } from "./ActiveRemoteBackendSidebar";
 
 const MAX_VISIBLE_THREADS_PER_FOLDER = 5;
 
 function RemoteThreadRow(props: {
   thread: RemoteCodexThreadSummary;
-  workerReady: boolean;
-  onOpenThread?: (thread: RemoteCodexThreadSummary) => void;
+  opening: boolean;
+  onOpenThread: (thread: RemoteCodexThreadSummary) => void;
 }) {
-  const canOpen = props.workerReady && props.onOpenThread !== undefined;
-
   return (
     <SidebarMenuButton
       size="sm"
-      disabled={!canOpen}
+      disabled={props.opening}
       title={
-        canOpen
-          ? props.thread.preview || props.thread.title
-          : props.workerReady
-            ? "Remote workspace switching is not connected yet"
-            : "Connect the remote Synara worker before opening this thread"
+        props.opening
+          ? "Connecting to the remote workspace"
+          : props.thread.preview || props.thread.title
       }
       className="h-7 pl-9 text-[length:var(--app-font-size-ui,12px)] disabled:cursor-default disabled:opacity-65"
-      onClick={() => props.onOpenThread?.(props.thread)}
+      onClick={() => props.onOpenThread(props.thread)}
     >
       <span className="min-w-0 flex-1 truncate">{props.thread.title}</span>
       {props.thread.status === "active" ? (
@@ -64,14 +67,15 @@ function RemoteHostSection(props: {
   threads: readonly RemoteCodexThreadSummary[];
   threadsLoading: boolean;
   threadsError: string | null;
+  openError: string | null;
+  openingThreadId: string | null;
   onToggle: () => void;
   onConnect: () => void;
-  onOpenThread?: (thread: RemoteCodexThreadSummary) => void;
+  onOpenThread: (thread: RemoteCodexThreadSummary) => void;
 }) {
   const [expandedFolders, setExpandedFolders] = useState<ReadonlySet<string>>(new Set());
   const folders = useMemo(() => groupRemoteCodexThreadsByCwd(props.threads), [props.threads]);
   const presentation = remoteWorkerStatusPresentation(props.worker?.state);
-  const workerReady = props.worker?.state === "ready";
   const connectDisabled = props.worker?.state === "ready" || props.worker?.state === "connecting";
   const connectionTitle = props.worker?.lastError
     ? `${presentation.label}: ${props.worker.lastError}`
@@ -116,47 +120,54 @@ function RemoteHostSection(props: {
                 No Codex sessions found
               </div>
             ) : (
-              folders.map((folder) => {
-                const folderExpanded = expandedFolders.has(folder.cwd);
-                return (
-                  <div key={folder.cwd}>
-                    <SidebarMenuButton
-                      size="sm"
-                      aria-expanded={folderExpanded}
-                      className="h-7 cursor-pointer pl-6 text-[11px]"
-                      onClick={() =>
-                        setExpandedFolders((current) => {
-                          const next = new Set(current);
-                          if (next.has(folder.cwd)) next.delete(folder.cwd);
-                          else next.add(folder.cwd);
-                          return next;
-                        })
-                      }
-                    >
-                      <FolderOpenIcon className="size-3 shrink-0 text-muted-foreground/65" />
-                      <span className="min-w-0 flex-1 truncate" title={folder.cwd}>
-                        {folder.cwd}
-                      </span>
-                      <span className="text-[10px] tabular-nums text-muted-foreground/55">
-                        {folder.threads.length}
-                      </span>
-                      <DisclosureChevron open={folderExpanded} />
-                    </SidebarMenuButton>
-                    {folderExpanded
-                      ? folder.threads
-                          .slice(0, MAX_VISIBLE_THREADS_PER_FOLDER)
-                          .map((thread) => (
-                            <RemoteThreadRow
-                              key={thread.threadId}
-                              thread={thread}
-                              workerReady={workerReady}
-                              onOpenThread={props.onOpenThread}
-                            />
-                          ))
-                      : null}
+              <>
+                {props.openError ? (
+                  <div className="mx-6 mb-1 rounded bg-destructive/8 px-2 py-1.5 text-[10px] text-destructive">
+                    {props.openError}
                   </div>
-                );
-              })
+                ) : null}
+                {folders.map((folder) => {
+                  const folderExpanded = expandedFolders.has(folder.cwd);
+                  return (
+                    <div key={folder.cwd}>
+                      <SidebarMenuButton
+                        size="sm"
+                        aria-expanded={folderExpanded}
+                        className="h-7 cursor-pointer pl-6 text-[11px]"
+                        onClick={() =>
+                          setExpandedFolders((current) => {
+                            const next = new Set(current);
+                            if (next.has(folder.cwd)) next.delete(folder.cwd);
+                            else next.add(folder.cwd);
+                            return next;
+                          })
+                        }
+                      >
+                        <FolderOpenIcon className="size-3 shrink-0 text-muted-foreground/65" />
+                        <span className="min-w-0 flex-1 truncate" title={folder.cwd}>
+                          {folder.cwd}
+                        </span>
+                        <span className="text-[10px] tabular-nums text-muted-foreground/55">
+                          {folder.threads.length}
+                        </span>
+                        <DisclosureChevron open={folderExpanded} />
+                      </SidebarMenuButton>
+                      {folderExpanded
+                        ? folder.threads
+                            .slice(0, MAX_VISIBLE_THREADS_PER_FOLDER)
+                            .map((thread) => (
+                              <RemoteThreadRow
+                                key={thread.threadId}
+                                thread={thread}
+                                opening={props.openingThreadId !== null}
+                                onOpenThread={props.onOpenThread}
+                              />
+                            ))
+                        : null}
+                    </div>
+                  );
+                })}
+              </>
             )}
           </div>
         ) : null}
@@ -165,13 +176,15 @@ function RemoteHostSection(props: {
   );
 }
 
-export function RemoteEnvironmentsSidebar(props: {
+function LocalRemoteEnvironmentsSidebar(props: {
   enabled?: boolean;
   onOpenThread?: (thread: RemoteCodexThreadSummary) => void;
 }) {
   const enabled = props.enabled ?? true;
   const queryClient = useQueryClient();
   const [expandedHosts, setExpandedHosts] = useState<ReadonlySet<string>>(new Set());
+  const [openingThreadId, setOpeningThreadId] = useState<string | null>(null);
+  const [openError, setOpenError] = useState<{ alias: string; message: string } | null>(null);
   const hostsQuery = useQuery(serverSshHostsQueryOptions({ enabled }));
   const workersQuery = useQuery(serverSynaraWorkersQueryOptions({ enabled }));
   const connectWorker = useMutation(serverConnectSynaraWorkerMutationOptions({ queryClient }));
@@ -216,6 +229,8 @@ export function RemoteEnvironmentsSidebar(props: {
                 threads={threadQuery?.data?.threads ?? []}
                 threadsLoading={threadQuery?.isLoading ?? false}
                 threadsError={threadQuery?.error instanceof Error ? threadQuery.error.message : null}
+                openError={openError?.alias === host.alias ? openError.message : null}
+                openingThreadId={openingThreadId}
                 onToggle={() =>
                   setExpandedHosts((current) => {
                     const next = new Set(current);
@@ -225,7 +240,51 @@ export function RemoteEnvironmentsSidebar(props: {
                   })
                 }
                 onConnect={() => connectWorker.mutate({ alias: host.alias })}
-                onOpenThread={props.onOpenThread}
+                onOpenThread={(thread) => {
+                  if (props.onOpenThread) {
+                    props.onOpenThread(thread);
+                    return;
+                  }
+                  setOpeningThreadId(thread.threadId);
+                  setOpenError(null);
+                  const knownWorker = workersByAlias.get(host.alias);
+                  const workerPromise =
+                    knownWorker?.state === "ready"
+                      ? Promise.resolve(knownWorker)
+                      : connectWorker.mutateAsync({ alias: host.alias });
+                  void workerPromise
+                    .then((worker) => {
+                      if (worker.state !== "ready" || !worker.localUrl) {
+                        throw new Error(
+                          worker.lastError ??
+                            (worker.state === "incompatible"
+                              ? "Synara is not installed on this server."
+                              : "The remote Synara backend is not ready."),
+                        );
+                      }
+                      const target = buildActiveRemoteBackendTarget({
+                        alias: host.alias,
+                        httpUrl: worker.localUrl,
+                        thread: {
+                          externalId: thread.threadId,
+                          title: thread.title,
+                          cwd: thread.cwd,
+                        },
+                      });
+                      writeActiveRemoteBackendTarget(target);
+                      reloadAppAtRoot();
+                    })
+                    .catch((error: unknown) => {
+                      setOpeningThreadId(null);
+                      setOpenError({
+                        alias: host.alias,
+                        message:
+                          error instanceof Error
+                            ? error.message
+                            : "The remote workspace could not be opened.",
+                      });
+                    });
+                }}
               />
             );
           })
@@ -233,4 +292,14 @@ export function RemoteEnvironmentsSidebar(props: {
       </SidebarMenu>
     </SidebarGroup>
   );
+}
+
+export function RemoteEnvironmentsSidebar(props: {
+  enabled?: boolean;
+  onOpenThread?: (thread: RemoteCodexThreadSummary) => void;
+}) {
+  const activeTarget = readActiveRemoteBackendTarget();
+  if (activeTarget) return <ActiveRemoteBackendSidebar initialTarget={activeTarget} />;
+  if (props.enabled === false) return null;
+  return <LocalRemoteEnvironmentsSidebar {...props} />;
 }
