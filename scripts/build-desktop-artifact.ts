@@ -31,6 +31,7 @@ import {
   RELEASE_WORKSPACE_MANIFEST_PATHS,
 } from "./lib/release-workspace-manifests.ts";
 import { resolveCatalogDependencies } from "./lib/resolve-catalog.ts";
+import { resolvePackagedMacAppRoots } from "./lib/packaged-mac-app-roots.ts";
 
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
 import * as NodeServices from "@effect/platform-node/NodeServices";
@@ -828,14 +829,20 @@ const assertPackagedMacDeviceHelper = Effect.fn("assertPackagedMacDeviceHelper")
   const path = yield* Path.Path;
   const fs = yield* FileSystem.FileSystem;
   const entries = yield* fs.readDirectory(stageDistDir);
+  const typedEntries: Array<{ name: string; type: string }> = [];
   for (const entry of entries) {
-    const helperRoot = path.join(
-      stageDistDir,
-      entry,
-      `${productName}.app`,
-      "Contents",
-      MAC_DEVICE_HELPER_RESOURCE_PATH,
-    );
+    const stat = yield* fs
+      .stat(path.join(stageDistDir, entry))
+      .pipe(Effect.catch(() => Effect.succeed(null)));
+    if (stat) typedEntries.push({ name: entry, type: stat.type });
+  }
+  const appRoots = resolvePackagedMacAppRoots({
+    stageDistDir,
+    productName,
+    entries: typedEntries,
+  });
+  for (const appRoot of appRoots) {
+    const helperRoot = path.join(appRoot, "Contents", MAC_DEVICE_HELPER_RESOURCE_PATH);
     if (
       (yield* fs.exists(path.join(helperRoot, "build.sh"))) &&
       (yield* fs.exists(path.join(helperRoot, "Sources/main.swift")))
